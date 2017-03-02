@@ -5,6 +5,8 @@
 #define ECE556_H
 
 #include <stdio.h>
+#include <math.h>
+#include <stdlib.h>
 
  /**
   * A structure to represent a 2D Point. 
