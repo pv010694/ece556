@@ -1,8 +1,6 @@
 // ECE556 - Copyright 2014 University of Wisconsin-Madison.  All Rights Reserved.
 
 #include "ece556.h"
-#include <stdio.h>
-#include <fstream.h>
 
 int readBenchmark(const char *fileName, routingInst *rst){
   char grid [128], capacity[128],num_nets[128];

@@ -7,6 +7,8 @@
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
+#include <fstream>
+#include <string.h>
 
  /**
   * A structure to represent a 2D Point. 
