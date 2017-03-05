@@ -17,7 +17,7 @@ int readBenchmark(const char *fileName, routingInst *rst){
   char *token,*token_new;
   int count=0;
   //Parsing grid values
-  token = strtok(grid,s);
+  token = strtok(grid," \t");
   while(token !=NULL)
   {
     if(count==1)
@@ -28,27 +28,27 @@ int readBenchmark(const char *fileName, routingInst *rst){
     else if(count==2)
 	rst->gy = atoi(token);
      count++;
-     token=strtok(NULL,s);
+     token=strtok(NULL," \t");
   }
   //Parsing capacity
   count=0;
-  token = strtok(capacity,s);
+  token = strtok(capacity," \t");
   while(token !=NULL)
   {
      if(count==1)
      	rst->cap = atoi(token);
      count++;
-     token=strtok(NULL,s);
+     token=strtok(NULL," \t");
   }
   //Parsing num-nets
   count=0;
-  token = strtok(num_nets,s);
+  token = strtok(num_nets," ");
   while(token !=NULL)
   {
      if (count==2)
       rst->numNets = atoi(token);
      count++;
-     token=strtok(NULL,s);
+     token=strtok(NULL," ");
   }
  
   //printf("gx:%d\n",rst->gx); 
@@ -65,8 +65,8 @@ int readBenchmark(const char *fileName, routingInst *rst){
 	strcpy(buf_cpy,buf);//copy cuz parsing using strtok is destructive
         strcpy(buf_cpy2,buf_cpy);
    	
-	token_new = strtok(buf_cpy2,s);
-	if(strtok(NULL,s)==NULL)	//detecting congestion info at the end of the file
+	token_new = strtok(buf_cpy2," ");
+	if(strtok(NULL," \t")==NULL)	//detecting congestion info at the end of the file
 		break;
 	
 	if(buf[0] == 'n')
@@ -75,7 +75,7 @@ int readBenchmark(const char *fileName, routingInst *rst){
 		count=0;
 		pin_index=0;
 		index++; //Think of a better way to find index
-		token=strtok(buf_cpy,s);
+		token=strtok(buf_cpy," ");
 		while(token !=NULL)
  		{
     		if(count==0)
@@ -90,16 +90,16 @@ int readBenchmark(const char *fileName, routingInst *rst){
 		else if(count==1)
 		{
 			rst->nets[index].numPins = atoi(token);
-			//printf("rst->nets[%d].numPins = %d\n",index,rst->nets[index].numPins);
+		 //	printf("rst->nets[%d].numPins = %d\n",index,rst->nets[index].numPins);
                 }
 			count++;
-			token=strtok(NULL,s);
+			token=strtok(NULL," ");
 		}
 
 			rst->nets[index].pins = (point*)malloc(sizeof(point)*rst->nets[index].numPins);
 	}
 	else
-	{	token = strtok(buf_cpy,s);
+	{	token = strtok(buf_cpy," \t");
   		while(token !=NULL)
  		{
     		if(count==0)
@@ -113,7 +113,7 @@ int readBenchmark(const char *fileName, routingInst *rst){
 			rst->nets[index].pins[pin_index].y = atoi(token);
 			//printf("rst->nets[%d].pins[%d].y = %d\n",index,pin_index,rst->nets[index].pins[pin_index].y);
 		}
-     			token=strtok(NULL,s);
+     			token=strtok(NULL," \t");
   		}
 		pin_index++;
        }
@@ -161,6 +161,7 @@ int solveRouting(routingInst *rst){
 		for(int e=1; e< numEdges; e++) {
 			
 			cur_seg_array[indx].edges[e] = ++first_edge_indx;
+			//printf("\nedgeindx: %d ", cur_seg_array[indx].edges[e]);
 		
 
 		    }
@@ -185,8 +186,10 @@ int solveRouting(routingInst *rst){
 		
 		for(int e=1; e< numEdges; e++) {
 			
-			cur_seg_array[indx].edges[e] = ++first_edge_indx;
+			first_edge_indx += rst->gx;
+			cur_seg_array[indx].edges[e] = first_edge_indx;
 		
+			//printf("\nedgeindx: %d", cur_seg_array[indx].edges[e]);
 
 		    }
 
@@ -216,6 +219,7 @@ int solveRouting(routingInst *rst){
 			
 			cur_seg_array[indx].edges[e] = ++first_edge_indx;
 		
+			//printf("\nedgeindx: %d", cur_seg_array[indx].edges[e]);
 
 		    }
 
@@ -229,8 +233,10 @@ int solveRouting(routingInst *rst){
 		
 		   for(int e=1+h_numEdges; e< numEdges; e++) {
 			
-			cur_seg_array[indx].edges[e] = ++first_edge_indx_v;
+			first_edge_indx_v   = first_edge_indx_v + rst->gx;
+			cur_seg_array[indx].edges[e] = first_edge_indx_v;
 		
+			//printf("\nedgeindx: %d", cur_seg_array[indx].edges[e]);
 
 		    }
 
@@ -248,6 +254,58 @@ int solveRouting(routingInst *rst){
 
 int writeOutput(const char *outRouteFile, routingInst *rst){
   /*********** TO BE FILLED BY YOU **********/
+
+  FILE *fp;
+  fp=fopen(outRouteFile, "w");
+
+  net *net_array = rst->nets;
+
+  for(int k=0;k<rst->numNets;k++) {
+
+	segment *cur_seg_array = net_array[k].nroute.segments;
+	
+	fprintf(fp,"n%d\n",k);
+ 		
+	for(int j=0;j<net_array[k].nroute.numSegs;j++) {
+
+		int *edgearray = cur_seg_array[j].edges;
+		int numEdges = cur_seg_array[j].numEdges;
+
+		for (int l=0;l<numEdges;l++) {
+
+			int edgeid = edgearray[l];
+
+			if  ( edgeid < ( rst->gy*(rst->gx-1) ) ) { //then horizontal edge
+			
+				int height = edgeid/( rst->gx - 1);
+				int source_x = edgeid - height*(rst->gx - 1);
+				int dest_x = source_x + 1;
+				fprintf(fp,"(%d,%d)-(%d,%d)\n",source_x,height,dest_x,height);
+
+			}
+				
+
+			else 				  {  // then vertical edge
+	 			
+				int offset   =  (edgeid - rst->gy*(rst->gx-1) );
+				int width    =  offset % (rst->gx);
+				int source_y =  offset - width* ( rst->gy - 1);
+				fprintf(fp,"(%d,%d)-(%d,%d)\n",width,source_y,width,source_y+1);
+
+			
+
+			}
+	 
+
+
+		}
+
+	}
+
+        	
+	fprintf(fp,"!\n"); 		
+
+  }
 
   return 1;
 }

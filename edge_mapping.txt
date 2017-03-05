@@ -1,0 +1,23 @@
+##X*Y grid
+
+Number of horizontal edges = Y(X-1)
+Number of vertical edges = X(Y-1)
+
+##Mapping from points to edge IDs
+
+horizontal edge from (x,y) to (x+1,y).
+
+EdgeID = y*(X-1) + x
+
+vertical edge from (x,y) to (x,y+1)
+
+EdgeID = x*(Y-1) + y + Y(X-1)
+
+
+##Mapping from edge IDs to points
+
+if 0 <= ID < Y*(X-1) then horizontal edge
+	height(y) = edgeID/(X-1)
+
+else then vertical edge
+	 width(x) = (edgeID - Y(X-1) ) % X
