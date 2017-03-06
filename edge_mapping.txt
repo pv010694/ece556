@@ -17,7 +17,9 @@ EdgeID = x*(Y-1) + y + Y(X-1)
 ##Mapping from edge IDs to points
 
 if 0 <= ID < Y*(X-1) then horizontal edge
-	height(y) = edgeID/(X-1)
+	subsitute x=0 in horizontal EdgeID equation and find y. ( x ranges from 0-X-1)
+	height(y) = edgeID/(X-1) 
 
 else then vertical edge
-	 width(x) = (edgeID - Y(X-1) ) % X
+	 substitute y=0 in vertical edgeID equation
+	 width(x) = (edgeID - Y(X-1) ) / (Y-1)

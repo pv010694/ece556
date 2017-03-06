@@ -51,10 +51,10 @@ int readBenchmark(const char *fileName, routingInst *rst){
      token=strtok(NULL," \t\n");
   }
  
-  printf("gx:%d\n",rst->gx); 
-  printf("gy:%d\n",rst->gy); 
-  printf("cap:%d\n",rst->cap);  
-  printf("numNets:%d\n",rst->numNets); 
+ // printf("gx:%d\n",rst->gx); 
+ // printf("gy:%d\n",rst->gy); 
+ // printf("cap:%d\n",rst->cap);  
+ // printf("numNets:%d\n",rst->numNets); 
   rst->nets = (net*)malloc(rst->numNets*sizeof(net));
 
   char buf[128],buf_cpy[128],buf_cpy2[128];
@@ -85,12 +85,12 @@ int readBenchmark(const char *fileName, routingInst *rst){
 			
 			rst->nets[index].id = index;//Put ID of the net here;
 			//printf("HERE\n");
-			printf("rst->nets[%d].id = %d\n",index,rst->nets[index].id);
+		//	printf("rst->nets[%d].id = %d\n",index,rst->nets[index].id);
 		}
 		else if(count==1)
 		{
 			rst->nets[index].numPins = atoi(token);
-		 	printf("rst->nets[%d].numPins = %d\n",index,rst->nets[index].numPins);
+		 //	printf("rst->nets[%d].numPins = %d\n",index,rst->nets[index].numPins);
                 }
 			count++;
 			token=strtok(NULL," \t\n");
@@ -105,13 +105,13 @@ int readBenchmark(const char *fileName, routingInst *rst){
     		if(count==0)
     		{	
 			rst->nets[index].pins[pin_index].x = atoi(token);
-			printf("rst->nets[%d].pins[%d].x = %d\n",index,pin_index,rst->nets[index].pins[pin_index].x);
+		//	printf("rst->nets[%d].pins[%d].x = %d\n",index,pin_index,rst->nets[index].pins[pin_index].x);
     			count++;
     		}
    		 else
 		{	
 			rst->nets[index].pins[pin_index].y = atoi(token);
-			printf("rst->nets[%d].pins[%d].y = %d\n",index,pin_index,rst->nets[index].pins[pin_index].y);
+		//	printf("rst->nets[%d].pins[%d].y = %d\n",index,pin_index,rst->nets[index].pins[pin_index].y);
 		}
      			token=strtok(NULL," \t\n");
   		}
@@ -131,15 +131,16 @@ int solveRouting(routingInst *rst){
 	net cur_net = net_array[k];
 	point *pins = cur_net.pins;
 	
-	int num_segments = (cur_net.numPins/2) + 1;
-	rst->nets[k].nroute.numSegs = num_segments;
+	int num_segments = cur_net.numPins - 1;
+
+	rst->nets[k].nroute.numSegs  = num_segments;
 	rst->nets[k].nroute.segments = new segment[num_segments]; 
 
 	segment *cur_seg_array = rst->nets[k].nroute.segments;
 	
-	int indx=0;
+	int p=0;
 
-	for(int p=0;p<cur_net.numPins-1;p++,indx++) {
+	for(int indx=0;indx<num_segments;indx++) {
 
 		cur_seg_array[indx].p1 = pins[p];
 		cur_seg_array[indx].p2 = pins[p+1];
@@ -153,15 +154,21 @@ int solveRouting(routingInst *rst){
 		cur_seg_array[indx].numEdges = numEdges;
 
 		cur_seg_array[indx].edges    = new int[numEdges];
-			
-		int first_edge_indx	     = ( (pins[p].y)*(rst->gx - 1) + pins[p].x );
+		
+		int source_x = pins[p].x;
+
+		if ( pins[p].x > pins[p+1].x ){ 
+		
+			source_x = pins[p+1].x;
+		}	
+
+		int first_edge_indx	     = ( (pins[p].y)*(rst->gx - 1) + source_x );
 	
          	cur_seg_array[indx].edges[0] = first_edge_indx;
 		
 		for(int e=1; e< numEdges; e++) {
 			
 			cur_seg_array[indx].edges[e] = ++first_edge_indx;
-			//printf("\nedgeindx: %d ", cur_seg_array[indx].edges[e]);
 		
 
 		    }
@@ -180,16 +187,23 @@ int solveRouting(routingInst *rst){
 
 		cur_seg_array[indx].edges    = new int[numEdges];
 			
-		int first_edge_indx	     = ( (pins[p].x)*(rst->gy - 1) + pins[p].y + rst->gy * (rst->gx - 1) );
+		int source_y = pins[p].y;
+
+		if ( pins[p].y > pins[p+1].y ){ 
+			
+			source_y = pins[p+1].y;
+
+		}
+
+	
+		int first_edge_indx	     = ( (pins[p].x)*(rst->gy - 1) + source_y + rst->gy * (rst->gx - 1) );
 
 		cur_seg_array[indx].edges[0] = first_edge_indx;
 		
 		for(int e=1; e< numEdges; e++) {
 			
-			first_edge_indx += rst->gx;
-			cur_seg_array[indx].edges[e] = first_edge_indx;
+			cur_seg_array[indx].edges[e] = ++first_edge_indx;
 		
-			//printf("\nedgeindx: %d", cur_seg_array[indx].edges[e]);
 
 		    }
 
@@ -206,12 +220,26 @@ int solveRouting(routingInst *rst){
 		
 		  int numEdges = abs(pins[p].x - p_int.x) + abs(pins[p+1].y - p_int.y);
 
+		  
+		  cur_seg_array[indx].numEdges = numEdges;
+
 		  cur_seg_array[indx].edges    = new int[numEdges];
 
 		   // First horizontal flat segment
 
 		   int h_numEdges	       = abs(p_int.x - pins[p].x);
-		   int first_edge_indx         = ( (pins[p].y)*(rst->gx-1) + pins[p].x);
+
+		
+		int source_x = pins[p].x;
+
+		if ( pins[p].x > p_int.x ){ 
+			
+			source_x = p_int.x;
+
+		}
+
+
+		   int first_edge_indx         = ( (pins[p].y)*(rst->gx-1) + source_x );
 		   
 		   cur_seg_array[indx].edges[0] = first_edge_indx;
 		
@@ -219,31 +247,37 @@ int solveRouting(routingInst *rst){
 			
 			cur_seg_array[indx].edges[e] = ++first_edge_indx;
 		
-			//printf("\nedgeindx: %d", cur_seg_array[indx].edges[e]);
 
 		    }
 
 		  //Then vertical flat segment
 
 		  // int v_numEdges		     = abs(pins[p+1].y - p_int.y);
+		
+		  	
+		int source_y = pins[p+1].y;
+
+		if ( pins[p+1].y > p_int.y ){ 
 			
-		   int first_edge_indx_v	          = ( (p_int.x)*(rst->gy-1) + p_int.y + rst->gy*(rst->gx - 1) );
+			source_y = p_int.y;
+
+		}
+		   
+		int first_edge_indx_v	          = ( (p_int.x)*(rst->gy-1) + source_y + rst->gy*(rst->gx - 1) );
 		  
 		   cur_seg_array[indx].edges[h_numEdges] = first_edge_indx_v;
 		
 		   for(int e=1+h_numEdges; e< numEdges; e++) {
 			
-			first_edge_indx_v   = first_edge_indx_v + rst->gx;
-			cur_seg_array[indx].edges[e] = first_edge_indx_v;
+			cur_seg_array[indx].edges[e] = ++first_edge_indx_v;
 		
-			//printf("\nedgeindx: %d", cur_seg_array[indx].edges[e]);
 
 		    }
 
 			
-		}
+		} //end of L-shaped else
 		
-	
+	    p++;	
 	}
 	
   } 
@@ -288,8 +322,8 @@ int writeOutput(const char *outRouteFile, routingInst *rst){
 			else 				  {  // then vertical edge
 	 			
 				int offset   =  (edgeid - rst->gy*(rst->gx-1) );
-				int width    =  offset % (rst->gx);
-				int source_y =  offset - width* ( rst->gy - 1);
+				int width    =  offset/(rst->gy - 1);
+				int source_y =  offset - width*( rst->gy - 1);
 				fprintf(fp,"(%d,%d)-(%d,%d)\n",width,source_y,width,source_y+1);
 
 			
@@ -314,7 +348,33 @@ int writeOutput(const char *outRouteFile, routingInst *rst){
 int release(routingInst *rst){
   /*********** TO BE FILLED BY YOU **********/
 
-  return 1;
+  net *net_array = rst->nets;
+
+  for(int k=0;k<rst->numNets;k++) {
+
+	segment *cur_seg_array = net_array[k].nroute.segments;
+	
+	for(int j=0;j<net_array[k].nroute.numSegs;j++) {
+
+		int *edgearray = cur_seg_array[j].edges;
+  
+		delete [] edgearray;
+	}
+
+	delete [] cur_seg_array;
+
+	point *pin_array = net_array[k].pins;
+	delete [] pin_array;
+
+
+
+  }
+
+  delete [] net_array;
+  delete rst;
+
+
+   return 1;
 }
   
 
