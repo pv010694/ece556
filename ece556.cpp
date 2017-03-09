@@ -9,11 +9,7 @@ int readBenchmark(const char *fileName, routingInst *rst){
   fgets(grid, 128, fp);
   fgets(capacity,128,fp);
   fgets(num_nets,128,fp);
-  //printf("%s\n",grid);
-  //printf("%s\n",capacity);
-  //printf("%s\n",num_nets);
-  
-  const char s[2]=" ";
+
   char *token,*token_new;
   int count=0;
   //Parsing grid values
@@ -51,10 +47,6 @@ int readBenchmark(const char *fileName, routingInst *rst){
      token=strtok(NULL," \t\n");
   }
  
- // printf("gx:%d\n",rst->gx); 
- // printf("gy:%d\n",rst->gy); 
- // printf("cap:%d\n",rst->cap);  
- // printf("numNets:%d\n",rst->numNets); 
   rst->nets = (net*)malloc(rst->numNets*sizeof(net));
 
   char buf[128],buf_cpy[128],buf_cpy2[128];
@@ -71,26 +63,21 @@ int readBenchmark(const char *fileName, routingInst *rst){
 	
 	if(buf[0] == 'n')
 	{
-		//printf("HERE\n");
 		count=0;
 		pin_index=0;
-		index++; //Think of a better way to find index
+		index++; 
 		token=strtok(buf_cpy," \t\n");
 		while(token !=NULL)
  		{
     		if(count==0)
     		{			
- 			//(rst->nets+index)=(net*)malloc(sizeof(net));
-			//rst->nets = (net*)malloc(sizeof(net)*num_nets);
-			
+ 						
 			rst->nets[index].id = index;//Put ID of the net here;
-			//printf("HERE\n");
-		//	printf("rst->nets[%d].id = %d\n",index,rst->nets[index].id);
 		}
 		else if(count==1)
 		{
 			rst->nets[index].numPins = atoi(token);
-		 //	printf("rst->nets[%d].numPins = %d\n",index,rst->nets[index].numPins);
+	
                 }
 			count++;
 			token=strtok(NULL," \t\n");
@@ -105,13 +92,11 @@ int readBenchmark(const char *fileName, routingInst *rst){
     		if(count==0)
     		{	
 			rst->nets[index].pins[pin_index].x = atoi(token);
-		//	printf("rst->nets[%d].pins[%d].x = %d\n",index,pin_index,rst->nets[index].pins[pin_index].x);
     			count++;
     		}
    		 else
 		{	
 			rst->nets[index].pins[pin_index].y = atoi(token);
-		//	printf("rst->nets[%d].pins[%d].y = %d\n",index,pin_index,rst->nets[index].pins[pin_index].y);
 		}
      			token=strtok(NULL," \t\n");
   		}
