@@ -94,7 +94,7 @@ int readBenchmark(const char *fileName, routingInst *rst);
    input: pointer to the routing instance
    output: 1 if successful, 0 otherwise (e.g. the data structures are not populated) 
 */
-int solveRouting(routingInst *rst);
+int solveRouting(routingInst *rst, int d, int n);
   
 /* int writeOutput(const char *outRouteFile, routingInst *rst)
    Write the routing solution obtained from solveRouting(). 

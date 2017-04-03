@@ -106,9 +106,11 @@ int readBenchmark(const char *fileName, routingInst *rst){
   return 1;
 }
 
-int solveRouting(routingInst *rst){
+int solveRouting(routingInst *rst, int d, int n){
   /*********** TO BE FILLED BY YOU **********/
 
+ if(n==0 && d==0)					//Part 1 solution
+ {
  net *net_array = rst->nets;
 
   for(int k=0;k<rst->numNets;k++) {
@@ -266,7 +268,383 @@ int solveRouting(routingInst *rst){
 	}
 	
   } 
+ 
+ }
 
+ if(d==1)	//Apply net decomposition
+ {
+
+  net *net_array = rst->nets;
+  
+  for(int k=0; k<rst->numNets;k++)
+  {
+	net cur_net = net_array[k]; 		//cur_net is the current net
+	point *pins = cur_net.pins;		//pins is the pins of the current net
+
+	int *flag = new int [cur_net.numPins];	
+	for (int j=0; j< cur_net.numPins; j++)
+		flag[j]=0;
+
+	//Sort the pins to find the corner most one
+	point corner_pin = pins[0];
+	int corner_pin_index=0,nearest_pin_index=0;
+	int min_dist = 2147483647;
+	for(int j=1; j<cur_net.numPins; j++)
+	{
+		if ( (pins[j].x < corner_pin.x ) || ((pins[j].x == corner_pin.x) && (pins[j].y < corner_pin.y)))
+			{ corner_pin = pins[j]; corner_pin_index = j; }
+	}
+	flag[corner_pin_index]=1;
+	
+	//Find the nearest pin to corner pin
+	for(int j=0; j<cur_net.numPins; j++)
+	{
+		if(flag[j]!=1)
+		{
+			int dist = abs(corner_pin.x - pins[j].x) + abs(corner_pin.y - pins[j].y);
+			if(dist < min_dist)
+			{
+				nearest_pin_index=j;
+				min_dist = dist;
+			}
+		}
+	}
+	flag[nearest_pin_index]=1;
+
+	//printf(" Corner pin x: %d y: %d Nearest pin x: %d y: %d\n",pins[corner_pin_index].x,pins[corner_pin_index].y,pins[nearest_pin_index].x,pins[nearest_pin_index].y);
+	//break;
+	
+	//Connect the corner pin with the closest pin
+	int num_segments = cur_net.numPins-1 ;		
+
+	rst->nets[k].nroute.numSegs  = num_segments;
+	rst->nets[k].nroute.segments = new segment[num_segments]; 
+
+	segment *cur_seg_array = rst->nets[k].nroute.segments;
+	segment *alt_seg_array = new segment[num_segments];
+	int indx=0;
+	int L_FLAG=0;
+        point p_int, p_int2;
+	point oldp_int, oldp_int2;
+        int old_numEdges;	
+  	if( pins[corner_pin_index].y == pins[nearest_pin_index].y )
+	{
+		/*Horizontal flat segment*/
+		// point p_int;
+		p_int.x = pins[nearest_pin_index].x;
+		p_int.y = pins[nearest_pin_index].y;
+		oldp_int = p_int;
+		int numEdges = abs(pins[corner_pin_index].x - pins[nearest_pin_index].x);
+		//indx=0;
+		cur_seg_array[indx].numEdges = numEdges;
+		
+		cur_seg_array[indx].edges    = new int[numEdges];
+		
+		int source_x = pins[corner_pin_index].x;
+
+		if ( pins[corner_pin_index].x > pins[nearest_pin_index].x )
+			source_x = pins[nearest_pin_index].x;
+
+		int first_edge_indx	     = ( (pins[corner_pin_index].y)*(rst->gx - 1) + source_x );
+	
+         	cur_seg_array[indx].edges[0] = first_edge_indx;
+		
+		for(int e=1; e< numEdges; e++) {
+			cur_seg_array[indx].edges[e] = ++first_edge_indx;
+		    }
+		old_numEdges = numEdges;
+	}	
+
+	else if ( pins[corner_pin_index].x == pins[nearest_pin_index].x) {
+		//point p_int;
+		p_int.x = pins[nearest_pin_index].x;
+		p_int.y = pins[nearest_pin_index].y;
+		oldp_int = p_int;
+		/*Vertical flat segment*/
+
+		int numEdges		     = abs(pins[corner_pin_index].y - pins[nearest_pin_index].y);
+		//indx=0;
+		cur_seg_array[indx].numEdges = numEdges;
+
+		cur_seg_array[indx].edges    = new int[numEdges];
+			
+		int source_y = pins[corner_pin_index].y;
+		if ( pins[corner_pin_index].y > pins[nearest_pin_index].y )
+			source_y = pins[nearest_pin_index].y;
+	
+		int first_edge_indx	     = ( (pins[corner_pin_index].x)*(rst->gy - 1) + source_y + rst->gy * (rst->gx - 1) );
+
+		cur_seg_array[indx].edges[0] = first_edge_indx;
+		
+		for(int e=1; e< numEdges; e++) {
+			cur_seg_array[indx].edges[e] = ++first_edge_indx;
+		    }
+		old_numEdges = numEdges;
+		}
+
+	else   {
+		  //Routing both alternative paths between 2 points!
+		  L_FLAG=1;
+		  //point p_int, p_int2;
+		  p_int.y = pins[corner_pin_index].y;
+		  p_int.x = pins[nearest_pin_index].x;
+		
+		  p_int2.y = pins[nearest_pin_index].y;
+		  p_int2.x = pins[corner_pin_index].x;
+		  
+		  oldp_int = p_int;
+		  oldp_int2 = p_int2;
+
+		  int numEdges = abs(pins[corner_pin_index].x - p_int.x) + abs(pins[nearest_pin_index].y - p_int.y);
+		  cur_seg_array[indx].numEdges = numEdges;
+		  cur_seg_array[indx].edges    = new int[numEdges];
+		  
+		  alt_seg_array[indx].numEdges = numEdges;
+		  alt_seg_array[indx].edges   = new int[numEdges];
+		   // First horizontal flat segment for cur_seg_array and vertical flat segment for alt_seg_array
+		   int h_numEdges	       = abs(p_int.x - pins[corner_pin_index].x);
+		   int source_x = pins[corner_pin_index].x;
+
+		   int v_numEdges   =  abs(p_int2.y - pins[corner_pin_index].y);
+		   int source_y = pins[corner_pin_index].y;
+
+		if ( pins[corner_pin_index].x > p_int.x )	
+			source_x = p_int.x;
+
+		   int first_edge_indx         = ( (pins[corner_pin_index].y)*(rst->gx-1) + source_x );
+		   
+		   cur_seg_array[indx].edges[0] = first_edge_indx;
+		
+		    for(int e=1; e<h_numEdges; e++) {
+			cur_seg_array[indx].edges[e] = ++first_edge_indx;
+		    }
+
+		if ( pins[corner_pin_index].y > p_int2.y )	
+			source_y = p_int2.y;
+
+		   int first_edge_indx_v         = ( (pins[corner_pin_index].x)*(rst->gy-1) + source_y + rst->gy*(rst->gx - 1) );
+		   alt_seg_array[indx].edges[0] = first_edge_indx_v;
+		
+		    for(int e=1; e<v_numEdges; e++) {
+			alt_seg_array[indx].edges[e] = ++first_edge_indx_v;
+		    }
+		 	
+		  //Then vertical flat segment for cur_seg_array and horizonal flat segment for alt_seg_array
+		int source_y2 = pins[nearest_pin_index].y;
+
+		if ( pins[nearest_pin_index].y > p_int.y ){ 	
+			source_y2 = p_int.y;
+		}
+		   
+		int first_edge_indx_v2	          = ( (p_int.x)*(rst->gy-1) + source_y2 + rst->gy*(rst->gx - 1) );
+		 cur_seg_array[indx].edges[h_numEdges] = first_edge_indx_v2;
+
+		   for(int e=1+h_numEdges; e< numEdges; e++) {
+			cur_seg_array[indx].edges[e] = ++first_edge_indx_v2;
+		    }
+
+		int source_x2 = pins[nearest_pin_index].x;
+
+		if ( pins[nearest_pin_index].x > p_int2.x ){ 	
+			source_x2 = p_int2.x;
+		}
+		   
+		int first_edge_indx2	          = ( (p_int2.y)*(rst->gx-1) + source_x2 );
+		 alt_seg_array[indx].edges[v_numEdges] = first_edge_indx2;
+
+		   for(int e=1+v_numEdges; e< numEdges; e++) {
+			alt_seg_array[indx].edges[e] = ++first_edge_indx2;
+		    }
+
+		old_numEdges = numEdges;
+			
+		} //end of L-shaped else
+
+    //Applying the same heuristic on top to all other points
+    for(int indx=1; indx<num_segments; indx++)
+    {
+	int delete_flag=0;
+	min_dist = 2147483647;
+	//Find the nearest pin to intermediate pin or last pin
+	for(int j=0; j<cur_net.numPins; j++)
+	{
+		if( (flag[j]!=1) )
+		{
+			int dist = abs(oldp_int.x - pins[j].x) + abs(oldp_int.y - pins[j].y);
+			if(dist < min_dist)
+			{
+				nearest_pin_index=j;
+				min_dist = dist;
+			}
+		}
+		if( (flag[j]!=1) && (L_FLAG==1) )
+		{
+			int dist1 = abs(oldp_int2.x - pins[j].x) + abs(oldp_int2.y - pins[j].y);
+			if(dist1 < min_dist)
+			{
+				nearest_pin_index=j;
+				min_dist = dist1;
+				delete_flag=1;
+			}
+		}
+	}
+	flag[nearest_pin_index]=1;
+		//FIXME: Do I need old and new copies of p_int and p_int2??
+		if(delete_flag==1)			//The best connection out of the two is chosen in cur_seg_array if there's 2 options available
+		{
+			for(int e=0; e<old_numEdges; e++)
+			{
+				cur_seg_array[indx-1].edges[e] = alt_seg_array[indx-1].edges[e];
+			}
+			oldp_int.x= p_int2.x;	oldp_int.y=p_int2.y;
+			delete_flag=0;
+			//delete [] alt_seg_array;
+
+		}
+		L_FLAG=0;
+		
+		if( oldp_int.y == pins[nearest_pin_index].y )
+	{
+		/*Horizontal flat segment*/
+		// point p_int;
+		p_int.x = pins[nearest_pin_index].x;
+		p_int.y = pins[nearest_pin_index].y;
+		//oldp_int = p_int;
+		int numEdges = abs(oldp_int.x - pins[nearest_pin_index].x);
+
+		cur_seg_array[indx].numEdges = numEdges;
+		
+		cur_seg_array[indx].edges    = new int[numEdges];
+		
+		int source_x = oldp_int.x;
+
+		if ( oldp_int.x > pins[nearest_pin_index].x )
+			source_x = pins[nearest_pin_index].x;
+
+		int first_edge_indx	     = ( (oldp_int.y)*(rst->gx - 1) + source_x );
+	
+         	cur_seg_array[indx].edges[0] = first_edge_indx;
+		
+		for(int e=1; e< numEdges; e++) {
+			cur_seg_array[indx].edges[e] = ++first_edge_indx;
+		    }
+ 		oldp_int = p_int;
+		old_numEdges = numEdges;
+	}
+
+		else if ( oldp_int.x == pins[nearest_pin_index].x) {
+		//point p_int;
+		p_int.x = pins[nearest_pin_index].x;
+		p_int.y = pins[nearest_pin_index].y;
+		//oldp_int = p_int;
+		/*Vertical flat segment*/
+
+		int numEdges		     = abs(oldp_int.y - pins[nearest_pin_index].y);
+
+		cur_seg_array[indx].numEdges = numEdges;
+
+		cur_seg_array[indx].edges    = new int[numEdges];
+			
+		int source_y = oldp_int.y;
+		if ( oldp_int.y > pins[nearest_pin_index].y )
+			source_y = pins[nearest_pin_index].y;
+	
+		int first_edge_indx	     = ( (oldp_int.x)*(rst->gy - 1) + source_y + rst->gy * (rst->gx - 1) );
+
+		cur_seg_array[indx].edges[0] = first_edge_indx;
+		
+		for(int e=1; e< numEdges; e++) {
+			cur_seg_array[indx].edges[e] = ++first_edge_indx;
+		    }
+		p_int = oldp_int;
+		old_numEdges = numEdges;
+		}
+	
+		else   {
+		  //Routing both alternative paths between 2 points!
+		  L_FLAG=1;
+		  //point p_int, p_int2;
+		  p_int.y = oldp_int.y;
+		  p_int.x = pins[nearest_pin_index].x;
+		
+		  p_int2.y = pins[nearest_pin_index].y;
+		  p_int2.x = oldp_int.x;
+		  
+		  //oldp_int = p_int;
+		  //oldp_int2 = p_int2;
+
+		  int numEdges = abs(oldp_int.x - p_int.x) + abs(pins[nearest_pin_index].y - p_int.y);
+		  cur_seg_array[indx].numEdges = numEdges;
+		  cur_seg_array[indx].edges    = new int[numEdges];
+		  
+		  alt_seg_array[indx].numEdges = numEdges;
+		  alt_seg_array[indx].edges   = new int[numEdges];
+		   // First horizontal flat segment for cur_seg_array and vertical flat segment for alt_seg_array
+		   int h_numEdges	       = abs(p_int.x - oldp_int.x);
+		   int source_x = oldp_int.x;
+
+		   int v_numEdges   =  abs(p_int2.y - oldp_int.y);
+		   int source_y = oldp_int.y;
+
+		if ( oldp_int.x > p_int.x )	
+			source_x = p_int.x;
+
+		   int first_edge_indx         = ( (oldp_int.y)*(rst->gx-1) + source_x );
+		   
+		   cur_seg_array[indx].edges[0] = first_edge_indx;
+		
+		    for(int e=1; e<h_numEdges; e++) {
+			cur_seg_array[indx].edges[e] = ++first_edge_indx;
+		    }
+
+		if ( oldp_int.y > p_int2.y )	
+			source_y = p_int2.y;
+
+		   int first_edge_indx_v         = ( (oldp_int.x)*(rst->gy-1) + source_y + rst->gy*(rst->gx - 1) );
+		   alt_seg_array[indx].edges[0] = first_edge_indx_v;
+		
+		    for(int e=1; e<v_numEdges; e++) {
+			alt_seg_array[indx].edges[e] = ++first_edge_indx_v;
+		    }
+		 	
+		  //Then vertical flat segment for cur_seg_array and horizonal flat segment for alt_seg_array
+		int source_y2 = pins[nearest_pin_index].y;
+
+		if ( pins[nearest_pin_index].y > p_int.y ){ 	
+			source_y2 = p_int.y;
+		}
+		   
+		int first_edge_indx_v2	          = ( (p_int.x)*(rst->gy-1) + source_y2 + rst->gy*(rst->gx - 1) );
+		 cur_seg_array[indx].edges[h_numEdges] = first_edge_indx_v2;
+
+		   for(int e=1+h_numEdges; e< numEdges; e++) {
+			cur_seg_array[indx].edges[e] = ++first_edge_indx_v2;
+		    }
+
+		int source_x2 = pins[nearest_pin_index].x;
+
+		if ( pins[nearest_pin_index].x > p_int2.x ){ 	
+			source_x2 = p_int2.x;
+		}
+		   
+		int first_edge_indx2	          = ( (p_int2.y)*(rst->gx-1) + source_x2 );
+		 alt_seg_array[indx].edges[v_numEdges] = first_edge_indx2;
+
+		   for(int e=1+v_numEdges; e< numEdges; e++) {
+			alt_seg_array[indx].edges[e] = ++first_edge_indx2;
+		    }
+
+		oldp_int = p_int; oldp_int2= p_int2;
+		old_numEdges = numEdges;	
+		} //end of L-shaped else	
+
+		
+    }
+	
+
+  }	//end of for-loop	
+	
+ }		//End of net decomposition
 
   return 1;
 }
