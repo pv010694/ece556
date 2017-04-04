@@ -26,6 +26,16 @@ int readBenchmark(const char *fileName, routingInst *rst){
      count++;
      token=strtok(NULL," \t\n");
   }
+
+  rst->numEdges = rst->gy*(rst->gx -1) + rst->gx*(rst->gy -1);
+   
+  rst->edgeCaps  = new int[ rst->numEdges ];
+  rst->edgeUtils = new int[ rst->numEdges ];
+
+  /* Filling edge utilization array by zero */
+
+  memset( rst->edgeUtils, 0 , rst->numEdges );
+
   //Parsing capacity
   count=0;
   token = strtok(capacity," \t\n");
@@ -36,6 +46,11 @@ int readBenchmark(const char *fileName, routingInst *rst){
      count++;
      token=strtok(NULL," \t\n");
   }
+
+  /* Filling default capacity for each edge */
+
+  memset( rst->edgeCaps, rst->cap , rst->numEdges );
+
   //Parsing num-nets
   count=0;
   token = strtok(num_nets," \t\n");
@@ -47,7 +62,9 @@ int readBenchmark(const char *fileName, routingInst *rst){
      token=strtok(NULL," \t\n");
   }
  
-  rst->nets = (net*)malloc(rst->numNets*sizeof(net));
+  rst->nets = new net[ rst->numNets ];
+
+//(net*)malloc(rst->numNets*sizeof(net));
 
   char buf[128],buf_cpy[128],buf_cpy2[128];
   int index=-1; int pin_index;
@@ -58,8 +75,98 @@ int readBenchmark(const char *fileName, routingInst *rst){
         strcpy(buf_cpy2,buf_cpy);
    	
 	token_new = strtok(buf_cpy2," \t\n");
-	if(strtok(NULL," \t\n")==NULL)	//detecting congestion info at the end of the file
-	break; 
+	
+
+	if(strtok(NULL," \t\n")==NULL) {	//detecting congestion info at the end of the file
+
+	
+		char *token_conges;
+	
+		
+		while( fgets(buf,128,fp) != NULL ) {
+	
+			token_conges = strtok( buf," \t\n");
+			
+			int count_conges = 0;
+			int x1=0,y1=0,x2=0,y2=0,reduced_capacity=0;
+			
+			while( token_conges != NULL ) {
+
+				if( count_conges == 0 ) {
+					x1 = atoi( token_conges );
+				}
+
+				if( count_conges == 1) {
+
+					y1 = atoi(token_conges);
+				}
+
+				if( count_conges == 2) {
+
+					x2 = atoi (token_conges);
+				}
+
+				if( count_conges == 3) {
+
+					y2 = atoi (token_conges);
+				}
+
+				if( count_conges == 4) {
+
+					reduced_capacity = atoi (token_conges);
+				}
+
+				count_conges+=1;
+				token_conges = strtok(NULL," \t\n");
+		
+			}
+		
+			int edgeID;
+
+//			printf("\nBlocking points: %d,%d,%d,%d,%d",x1,y1,x2,y2,reduced_capacity);
+
+			/* Converting edge points into edgeIDs */
+			
+			if (x1 == x2 ) {
+
+				int y_min;
+
+				if( y1 < y2 ) {
+
+					y_min = y1;
+				}
+
+				else 
+					y_min = y2;
+
+				edgeID = x1*( rst->gy -1 ) + y_min + rst->gy*( rst->gx - 1 );
+
+			}
+
+			else { 
+
+				int x_min;
+
+				if( x1 < x2 ) {
+
+					x_min = x1;
+				}
+
+				else 
+					x_min = x2;
+
+				edgeID = y1*( rst->gx -1 ) + x_min;
+
+			  }
+			
+		rst->edgeCaps [ edgeID ] = reduced_capacity;	
+		
+		}
+		
+
+	break;
+
+	}
 	
 	if(buf[0] == 'n')
 	{
@@ -83,7 +190,8 @@ int readBenchmark(const char *fileName, routingInst *rst){
 			token=strtok(NULL," \t\n");
 		}
 
-			rst->nets[index].pins = (point*)malloc(sizeof(point)*rst->nets[index].numPins);
+			rst->nets[index].pins = new point[ rst->nets[index].numPins ];
+			//(point*)malloc(sizeof(point)*rst->nets[index].numPins);
 	}
 	else
 	{	token = strtok(buf_cpy," \t\n");
@@ -151,14 +259,23 @@ int solveRouting(routingInst *rst, int d, int n){
 
 		int first_edge_indx	     = ( (pins[p].y)*(rst->gx - 1) + source_x );
 	
+		rst->edgeUtils[ first_edge_indx ]++;
+		
+
+
          	cur_seg_array[indx].edges[0] = first_edge_indx;
 		
 		for(int e=1; e< numEdges; e++) {
 			
-			cur_seg_array[indx].edges[e] = ++first_edge_indx;
+			int eindx  = ++first_edge_indx;
+			cur_seg_array[indx].edges[e] = eindx;
 		
+			rst->edgeUtils [ eindx ]++;
 
-		    }
+		 }
+
+		
+		
 
 
 		}
@@ -186,11 +303,14 @@ int solveRouting(routingInst *rst, int d, int n){
 		int first_edge_indx	     = ( (pins[p].x)*(rst->gy - 1) + source_y + rst->gy * (rst->gx - 1) );
 
 		cur_seg_array[indx].edges[0] = first_edge_indx;
+
+		rst->edgeUtils [ first_edge_indx ]++;
 		
 		for(int e=1; e< numEdges; e++) {
 			
-			cur_seg_array[indx].edges[e] = ++first_edge_indx;
-		
+			int eindx = ++first_edge_indx;
+			cur_seg_array[indx].edges[e] = eindx;
+			rst->edgeUtils[ eindx ]++;
 
 		    }
 
@@ -229,10 +349,14 @@ int solveRouting(routingInst *rst, int d, int n){
 		   int first_edge_indx         = ( (pins[p].y)*(rst->gx-1) + source_x );
 		   
 		   cur_seg_array[indx].edges[0] = first_edge_indx;
+		   rst->edgeUtils[ first_edge_indx ]++;
+			
 		
 		    for(int e=1; e<h_numEdges; e++) {
 			
-			cur_seg_array[indx].edges[e] = ++first_edge_indx;
+			int eindx = ++first_edge_indx;
+			cur_seg_array[indx].edges[e] = eindx;
+			rst->edgeUtils[ eindx ]++;
 		
 
 		    }
@@ -253,10 +377,14 @@ int solveRouting(routingInst *rst, int d, int n){
 		int first_edge_indx_v	          = ( (p_int.x)*(rst->gy-1) + source_y + rst->gy*(rst->gx - 1) );
 		  
 		   cur_seg_array[indx].edges[h_numEdges] = first_edge_indx_v;
+
+		   rst->edgeUtils[ first_edge_indx_v ]++;
 		
 		   for(int e=1+h_numEdges; e< numEdges; e++) {
 			
-			cur_seg_array[indx].edges[e] = ++first_edge_indx_v;
+			int eindx = ++first_edge_indx_v;
+			cur_seg_array[indx].edges[e] = eindx;
+			rst->edgeUtils[ eindx ]++;
 		
 
 		    }
@@ -348,9 +476,13 @@ int solveRouting(routingInst *rst, int d, int n){
 		int first_edge_indx	     = ( (pins[corner_pin_index].y)*(rst->gx - 1) + source_x );
 	
          	cur_seg_array[indx].edges[0] = first_edge_indx;
-		
+
+		rst->edgeUtils[ first_edge_indx ]++;	
+	
 		for(int e=1; e< numEdges; e++) {
-			cur_seg_array[indx].edges[e] = ++first_edge_indx;
+			int eindx = ++first_edge_indx;
+			cur_seg_array[indx].edges[e] = eindx;
+			rst->edgeUtils[ eindx ]++;
 		    }
 		old_numEdges = numEdges;
 	}	
@@ -376,8 +508,13 @@ int solveRouting(routingInst *rst, int d, int n){
 
 		cur_seg_array[indx].edges[0] = first_edge_indx;
 		
+		rst->edgeUtils[ first_edge_indx ]++;
+	
 		for(int e=1; e< numEdges; e++) {
-			cur_seg_array[indx].edges[e] = ++first_edge_indx;
+
+			int eindx = ++first_edge_indx;
+			cur_seg_array[indx].edges[e] = eindx;
+			rst->edgeUtils[ eindx ]++;	
 		    }
 		old_numEdges = numEdges;
 		}
@@ -415,8 +552,12 @@ int solveRouting(routingInst *rst, int d, int n){
 		   
 		   cur_seg_array[indx].edges[0] = first_edge_indx;
 		
+		   rst->edgeUtils[ first_edge_indx ]++;	
+
 		    for(int e=1; e<h_numEdges; e++) {
+		
 			cur_seg_array[indx].edges[e] = ++first_edge_indx;
+			rst->edgeUtils[ first_edge_indx ]++;	
 		    }
 
 		if ( pins[corner_pin_index].y > p_int2.y )	
@@ -424,9 +565,14 @@ int solveRouting(routingInst *rst, int d, int n){
 
 		   int first_edge_indx_v         = ( (pins[corner_pin_index].x)*(rst->gy-1) + source_y + rst->gy*(rst->gx - 1) );
 		   alt_seg_array[indx].edges[0] = first_edge_indx_v;
-		
-		    for(int e=1; e<v_numEdges; e++) {
+		     
+		   rst->edgeUtils[ first_edge_indx_v ]++;
+	
+		   for(int e=1; e<v_numEdges; e++) {
+
 			alt_seg_array[indx].edges[e] = ++first_edge_indx_v;
+			
+			rst->edgeUtils[ first_edge_indx_v ]++;	
 		    }
 		 	
 		  //Then vertical flat segment for cur_seg_array and horizonal flat segment for alt_seg_array
@@ -437,10 +583,15 @@ int solveRouting(routingInst *rst, int d, int n){
 		}
 		   
 		int first_edge_indx_v2	          = ( (p_int.x)*(rst->gy-1) + source_y2 + rst->gy*(rst->gx - 1) );
+		
 		 cur_seg_array[indx].edges[h_numEdges] = first_edge_indx_v2;
+
+		 rst->edgeUtils[ first_edge_indx_v2 ]++;	
 
 		   for(int e=1+h_numEdges; e< numEdges; e++) {
 			cur_seg_array[indx].edges[e] = ++first_edge_indx_v2;
+			
+			rst->edgeUtils[ first_edge_indx_v2 ]++;	
 		    }
 
 		int source_x2 = pins[nearest_pin_index].x;
@@ -451,9 +602,13 @@ int solveRouting(routingInst *rst, int d, int n){
 		   
 		int first_edge_indx2	          = ( (p_int2.y)*(rst->gx-1) + source_x2 );
 		 alt_seg_array[indx].edges[v_numEdges] = first_edge_indx2;
+		
+		rst->edgeUtils[ first_edge_indx2 ]++;	
 
 		   for(int e=1+v_numEdges; e< numEdges; e++) {
 			alt_seg_array[indx].edges[e] = ++first_edge_indx2;
+			
+			rst->edgeUtils[ first_edge_indx2 ]++;	
 		    }
 
 		old_numEdges = numEdges;
@@ -524,10 +679,15 @@ int solveRouting(routingInst *rst, int d, int n){
 		int first_edge_indx	     = ( (oldp_int.y)*(rst->gx - 1) + source_x );
 	
          	cur_seg_array[indx].edges[0] = first_edge_indx;
-		
+		rst->edgeUtils[ first_edge_indx ]++;	
+
 		for(int e=1; e< numEdges; e++) {
+		
 			cur_seg_array[indx].edges[e] = ++first_edge_indx;
-		    }
+			
+			rst->edgeUtils[ first_edge_indx ]++;	
+		 }
+
  		oldp_int = p_int;
 		old_numEdges = numEdges;
 	}
@@ -553,8 +713,13 @@ int solveRouting(routingInst *rst, int d, int n){
 
 		cur_seg_array[indx].edges[0] = first_edge_indx;
 		
+		rst->edgeUtils[ first_edge_indx ]++;	
+
 		for(int e=1; e< numEdges; e++) {
+
 			cur_seg_array[indx].edges[e] = ++first_edge_indx;
+			
+			rst->edgeUtils[ first_edge_indx ]++;	
 		    }
 		p_int = oldp_int;
 		old_numEdges = numEdges;
@@ -591,10 +756,13 @@ int solveRouting(routingInst *rst, int d, int n){
 
 		   int first_edge_indx         = ( (oldp_int.y)*(rst->gx-1) + source_x );
 		   
+		   rst->edgeUtils[ first_edge_indx ]++;	
 		   cur_seg_array[indx].edges[0] = first_edge_indx;
 		
 		    for(int e=1; e<h_numEdges; e++) {
 			cur_seg_array[indx].edges[e] = ++first_edge_indx;
+			
+			rst->edgeUtils[ first_edge_indx ]++;	
 		    }
 
 		if ( oldp_int.y > p_int2.y )	
@@ -603,8 +771,11 @@ int solveRouting(routingInst *rst, int d, int n){
 		   int first_edge_indx_v         = ( (oldp_int.x)*(rst->gy-1) + source_y + rst->gy*(rst->gx - 1) );
 		   alt_seg_array[indx].edges[0] = first_edge_indx_v;
 		
+		    rst->edgeUtils[ first_edge_indx_v ]++;	
 		    for(int e=1; e<v_numEdges; e++) {
 			alt_seg_array[indx].edges[e] = ++first_edge_indx_v;
+			
+			rst->edgeUtils[ first_edge_indx_v ]++;	
 		    }
 		 	
 		  //Then vertical flat segment for cur_seg_array and horizonal flat segment for alt_seg_array
@@ -617,8 +788,11 @@ int solveRouting(routingInst *rst, int d, int n){
 		int first_edge_indx_v2	          = ( (p_int.x)*(rst->gy-1) + source_y2 + rst->gy*(rst->gx - 1) );
 		 cur_seg_array[indx].edges[h_numEdges] = first_edge_indx_v2;
 
+		    rst->edgeUtils[ first_edge_indx_v2 ]++;	
 		   for(int e=1+h_numEdges; e< numEdges; e++) {
 			cur_seg_array[indx].edges[e] = ++first_edge_indx_v2;
+			
+			rst->edgeUtils[ first_edge_indx_v2 ]++;	
 		    }
 
 		int source_x2 = pins[nearest_pin_index].x;
@@ -629,9 +803,13 @@ int solveRouting(routingInst *rst, int d, int n){
 		   
 		int first_edge_indx2	          = ( (p_int2.y)*(rst->gx-1) + source_x2 );
 		 alt_seg_array[indx].edges[v_numEdges] = first_edge_indx2;
+		
+		rst->edgeUtils[ first_edge_indx2 ]++;	
 
 		   for(int e=1+v_numEdges; e< numEdges; e++) {
 			alt_seg_array[indx].edges[e] = ++first_edge_indx2;
+			
+			rst->edgeUtils[ first_edge_indx2 ]++;	
 		    }
 
 		oldp_int = p_int; oldp_int2= p_int2;
@@ -648,6 +826,15 @@ int solveRouting(routingInst *rst, int d, int n){
 
   return 1;
 }
+
+
+int ripnroute(routingInst *rst){
+
+ 
+	return 0;
+
+}
+
 
 int writeOutput(const char *outRouteFile, routingInst *rst){
   /*********** TO BE FILLED BY YOU **********/
@@ -706,6 +893,17 @@ int writeOutput(const char *outRouteFile, routingInst *rst){
 
   return 1;
 }
+
+
+
+
+
+
+
+
+
+
+
 
 
 int release(routingInst *rst){
