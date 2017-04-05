@@ -214,6 +214,12 @@ int readBenchmark(const char *fileName, routingInst *rst){
   return 1;
 }
 
+
+
+
+int ripnreroute(routingInst *rst);
+
+
 int solveRouting(routingInst *rst, int d, int n){
   /*********** TO BE FILLED BY YOU **********/
 
@@ -824,14 +830,183 @@ int solveRouting(routingInst *rst, int d, int n){
 	
  }		//End of net decomposition
 
+
+
+  if( n == 1) {
+
+	ripnreroute( rst );
+ 
+   }
+
+
+
   return 1;
 }
 
 
-int ripnroute(routingInst *rst){
+int ripnreroute(routingInst *rst){
 
- 
-	return 0;
+    int *edge_weights; //Edge weight array
+    int *edge_ovfhist; //Edge overflow-history array
+
+
+    edge_weights = new int[rst->numEdges];
+    edge_ovfhist = new int[rst->numEdges];
+
+    /* Calculating edge weights for first time */
+
+    for (int k=0;k< rst->numEdges; k++) {
+
+		int overflow = rst->edgeUtils[k] - rst->edgeCaps[k];
+	
+		if ( overflow < 0 ) {
+			
+			overflow = 0; 
+		}
+
+		edge_weights[k] = overflow;
+
+    		edge_ovfhist[k] = 1;    // Initializing overflow history to 1 for each edge 
+
+    }
+
+
+  /* Start ripnreroute loop */
+
+  int ticks = 100000000;
+  int cur_ticks = 0;
+
+  
+  do {
+
+   /* Finding the nets with overflow */
+
+  
+   net *net_array = rst->nets;
+
+   int net_cost=0;
+   std::priority_queue <int> net_indxQ;  //Using a max-queue to store net indices in descending order
+
+   for(int k=0;k<rst->numNets;k++) {
+
+	segment *cur_seg_array = net_array[k].nroute.segments;
+	
+	net_cost = 0;
+
+	for(int j=0;j<net_array[k].nroute.numSegs;j++) {
+
+		int *edgearray = cur_seg_array[j].edges;
+		int numEdges = cur_seg_array[j].numEdges;
+
+		for (int l=0;l<numEdges;l++) {
+
+			int edgeid = edgearray[l];			
+			net_cost  += edge_weights[ edgeid ];
+
+		}
+
+	}
+
+	if (net_cost > 0) {
+
+		net_indxQ.push( k );
+
+  	}	
+
+
+  }
+
+
+  /* Rip-up and reroute the bad nets  */
+
+
+   while ( net_indxQ.empty() == false ) {
+
+	int net_indx = net_indxQ.top();
+
+	net_indxQ.pop();
+			
+	segment *cur_seg_array = net_array[ net_indx ].nroute.segments;
+
+
+	/* Ripup the net */
+	
+	for(int j=0;j<net_array[ net_indx ].nroute.numSegs;j++) {
+
+		int *edgearray = cur_seg_array[j].edges;
+		int numEdges = cur_seg_array[j].numEdges;
+
+		for (int l=0;l<numEdges;l++) {
+
+			int edgeid = edgearray[l];
+			
+			rst->edgeUtils[ edgeid ]--;	
+				
+			int overflow = rst->edgeUtils[ edgeid ] - rst->edgeCaps[ edgeid ];
+	
+			if ( overflow < 0 ) {
+			
+				overflow = 0; 
+			}
+
+			if ( overflow > 0 ) {
+
+				edge_ovfhist[ edgeid ]++;
+
+			}		
+	
+
+			edge_weights[ edgeid ] = overflow*edge_ovfhist[ edgeid ] ;
+
+		}
+
+	}
+
+
+	/* Reroute the net */
+
+	
+
+
+
+
+
+
+
+
+
+   }
+
+	
+   /* Updating edge weights at end of current iteration */
+    
+    for (int k=0;k< rst->numEdges; k++) {
+
+		int overflow = rst->edgeUtils[k] - rst->edgeCaps[k];
+	
+		if ( overflow < 0 ) {
+			
+			overflow = 0; 
+		}
+
+		if ( overflow > 0 ) {
+
+			edge_ovfhist[k]++;
+		}
+
+		edge_weights[k] = overflow*edge_ovfhist[k];
+
+
+    }
+
+  
+
+    cur_ticks++;
+
+   } while (cur_ticks < ticks);
+
+
+  return 0;
 
 }
 

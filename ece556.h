@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <fstream>
 #include <string.h>
+#include <queue>
 
  /**
   * A structure to represent a 2D Point. 
