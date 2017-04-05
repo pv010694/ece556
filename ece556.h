@@ -11,6 +11,9 @@
 #include <string.h>
 #include <queue>
 
+
+time_t start, end, elapsed_time;   //global variable time 
+
  /**
   * A structure to represent a 2D Point. 
   */

@@ -655,13 +655,23 @@ int solveRouting(routingInst *rst, int d, int n){
 		{
 			for(int e=0; e<old_numEdges; e++)
 			{
+				rst->edgeUtils[cur_seg_array[indx-1].edges[e]]--;		//Reducing utilization of cur_seg edges because that route is being discarded
 				cur_seg_array[indx-1].edges[e] = alt_seg_array[indx-1].edges[e];
+				
 			}
 			oldp_int.x= p_int2.x;	oldp_int.y=p_int2.y;
 			delete_flag=0;
 			//delete [] alt_seg_array;
 
 		}
+		else
+		{
+			for(int e=0; e<old_numEdges; e++)
+			{
+				rst->edgeUtils[alt_seg_array[indx-1].edges[e]]--;		//Reducing utilization of alt_seg edges because that route is being discarded
+			}
+		}
+			
 		L_FLAG=0;
 		
 		if( oldp_int.y == pins[nearest_pin_index].y )
@@ -873,8 +883,8 @@ int ripnreroute(routingInst *rst){
 
   /* Start ripnreroute loop */
 
-  int ticks = 100000000;
-  int cur_ticks = 0;
+  //int ticks = 100000000;
+  //int cur_ticks = 0;
 
   
   do {
@@ -965,8 +975,13 @@ int ripnreroute(routingInst *rst){
 
 	/* Reroute the net */
 
-	
-
+	//Using A* to re-route the net
+	//Loop through all the segments. For each segment from Point P1 to P2 there's number of edges. It is these edges which are being re-routed through A*
+	for(int indx=0; indx<net_array[ net_indx ].nroute.numSegs; indx++)
+	{
+	 
+   		point *start_vertex = cur_seg_array[indx].p1;
+		point *end_vertex   = cur_seg_array[indx].p2;
 
 
 
@@ -979,7 +994,7 @@ int ripnreroute(routingInst *rst){
 
 	
    /* Updating edge weights at end of current iteration */
-    
+   //FIXME: Do we need to update edge weights at every iteration?? This could be done only when a net is ripped up 
     for (int k=0;k< rst->numEdges; k++) {
 
 		int overflow = rst->edgeUtils[k] - rst->edgeCaps[k];
@@ -1001,9 +1016,10 @@ int ripnreroute(routingInst *rst){
 
   
 
-    cur_ticks++;
+   end = time(NULL);
+   elapsed_time = difftime(end, start); 
 
-   } while (cur_ticks < ticks);
+   } while (elapsed_time < 900);
 
 
   return 0;
