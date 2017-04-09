@@ -2,7 +2,7 @@
 
 #include "ece556.h"
 
-extern time_t start,end,elapsed_time;
+time_t end_time,elapsed_time;
 
 int readBenchmark(const char *fileName, routingInst *rst){
   char grid [128], capacity[128],num_nets[128];
@@ -889,7 +889,7 @@ int ripnreroute(routingInst *rst){
 
   /* Start ripnreroute loop */
 
-  
+  elapsed_time = 0;
   do {
 
    /* Finding the nets with overflow */
@@ -986,6 +986,10 @@ int ripnreroute(routingInst *rst){
    		point start_vertex = cur_seg_array[indx].p1;
 		point end_vertex   = cur_seg_array[indx].p2;
 		int *edges 	   = routatouille_astar( start_vertex, end_vertex , rst->gx , rst-> gy , edge_weights );
+		int size_of_edgearray = sizeof(edges)/sizeof(int);
+		cur_seg_array[indx].numEdges = size_of_edgearray;
+		for(int l=0; l<size_of_edgearray; l++)
+			cur_seg_array[indx].edges[l] = edges[l];
 
    
    	}  //end of segment for the current (for loop)
@@ -1013,8 +1017,8 @@ int ripnreroute(routingInst *rst){
 
     }
 
-   end = time(NULL);
-   elapsed_time = difftime(end, start); 
+   end_time = time(NULL);
+   elapsed_time = difftime(end_time, start); 
 
    } while (elapsed_time < 90);
 
@@ -1022,7 +1026,6 @@ int ripnreroute(routingInst *rst){
   return 0;
 
 }
-
 
 typedef struct {
 
@@ -1032,6 +1035,8 @@ typedef struct {
 
 
 } queue_elem;
+
+
 
 struct compare {
 
@@ -1045,14 +1050,13 @@ struct compare {
 
 }
 
-}
-
+};
 
 
 int *routatouille_astar ( point start_vertex, point end_vertex, int gx,int gy, int* edge_weights ) {
 
-   custom_priority_queue <queue_elem, vector<queue_elem>, compare > min_queue;  //A* search min-queue
-   
+   std::priority_queue <queue_elem, vector<queue_elem>, compare > min_queue;  //A* search min-queue
+   //std::priority_queue<queue_elem, comp> min_queue; 
    std::unordered_map <point,int> distance_map;
    std::unordered_map <int,point> distance_map2;
    std::unordered_map <point,point> parent_map;
@@ -1080,7 +1084,7 @@ int *routatouille_astar ( point start_vertex, point end_vertex, int gx,int gy, i
     int cur_distance = cur_elem.distance;
 
 
-    if ( cur_vertex == end_vertex ) {
+    if ( (cur_vertex.x == end_vertex.x ) && (cur_vertex.y == end_vertex.y)) {
 
 	//return the predecessor map
 	break;
@@ -1115,9 +1119,9 @@ int *routatouille_astar ( point start_vertex, point end_vertex, int gx,int gy, i
 
         }
 
-        point adj_vertex = adj_point[k];
+        point adj_vertex = adj_points[k];
 	
-        if ( processed_set[ adj_vertex ].count() > 0 ) {
+        if ( processed_set.count(adj_vertex) > 0 ) {
 	
 				continue;
 	}
@@ -1178,8 +1182,9 @@ int *routatouille_astar ( point start_vertex, point end_vertex, int gx,int gy, i
 		del_elem.vertex = adj_vertex;
 		del_elem.distance = prev_adj_distance;
 
-		min_queue.remove( del_elem );
-	
+		//min_queue.remove( del_elem );
+		//Do we need to delete previous vertex from parent_map? No.
+
 		parent_map [ adj_vertex ] = cur_vertex;
 		min_queue.push ( adj_elem );
 		distance_map[ adj_vertex ] = adj_distance;
@@ -1211,12 +1216,12 @@ int *routatouille_astar ( point start_vertex, point end_vertex, int gx,int gy, i
  int edgeID[ 10000 ] ;
 
  int k= 0;
- while ( p1 != p2  ) {
+ while ( (p1.x != p2.x) || (p1.y!=p2.y)  ) {
 
  /* Find edge Ids between p1 and p2 */
 
   
-       int edge_indx,source_x,source_y;
+       int source_x,source_y;
 
 	if( p1.x == p2.x )
         {

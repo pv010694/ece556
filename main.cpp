@@ -11,7 +11,7 @@ int main(int argc, char **argv)
  		return 1;
  	}
 	int opt,d,n;
-	start = time(NULL);  //store the starting time
+	time_t start = time(NULL);  //store the starting time
 	d=0;n=0;
 	while((opt = getopt (argc, argv, "d:n:"))!=-1)
 	{

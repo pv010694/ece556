@@ -17,9 +17,11 @@
 #include <iostream>
 #include <fstream>
 #include <math.h>    // for sqrt
-
+#include <map>
+#include <unordered_map>
+#include <set>
 using namespace std;
-
+extern time_t start;
 
  /**
   * A structure to represent a 2D Point. 
@@ -132,6 +134,7 @@ int solveRouting(routingInst *rst, int d, int n);
   */
  int release(routingInst *rst);
 
+/*
 template< typename T, typename std::vector<T>,std::less<typename Container::value_type> >
 class custom_priority_queue : public std::priority_queue< T, std::vector<T>, std::less<typename Container::value_type>  >
 {
@@ -149,8 +152,7 @@ class custom_priority_queue : public std::priority_queue< T, std::vector<T>, std
        }
  }
 };
-
-
+*/
 
 
 
