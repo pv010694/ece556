@@ -11,7 +11,7 @@ CCC = g++
 # Compiler options                                                              
 # ---------------------------------------------------------------------         
 
-CCOPT = -m64 -O -fPIC -fexceptions -DNDEBUG -DIL_STD -g -Wall -I /userspace/p/psrinivasan4/Desktop/ECE556/ece556/boost_1_63_0
+CCOPT = -m64 -O -fPIC -fexceptions -DNDEBUG -DIL_STD -g -Wall -std=c++11 
 #CCOPT = -m64 -g -Wall
 
 # ---------------------------------------------------------------------         
