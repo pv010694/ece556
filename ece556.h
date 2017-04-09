@@ -11,6 +11,20 @@
 #include <string.h>
 #include <queue>
 
+#include <boost/graph/astar_search.hpp>
+#include <boost/graph/adjacency_list.hpp>
+#include <boost/graph/random.hpp>
+#include <boost/random.hpp>
+#include <boost/graph/graphviz.hpp>
+#include <sys/time.h>
+#include <vector>
+#include <list>
+#include <iostream>
+#include <fstream>
+#include <math.h>    // for sqrt
+
+using namespace boost;
+using namespace std;
 
 time_t start, end, elapsed_time;   //global variable time 
 
