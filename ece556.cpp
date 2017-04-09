@@ -2,6 +2,7 @@
 
 #include "ece556.h"
 
+extern time_t start;
 time_t end_time,elapsed_time;
 
 int readBenchmark(const char *fileName, routingInst *rst){
@@ -218,7 +219,7 @@ int readBenchmark(const char *fileName, routingInst *rst){
 
 
 
-int *routatouille_astar ( point start_vertex, point end_vertex, int gx,int gy, int* edge_weights );
+void routatouille_astar ( int* edge_array,point start_vertex, point end_vertex, int gx, int gy,int* edge_weights );
 
 int ripnreroute(routingInst *rst);
 
@@ -581,7 +582,9 @@ int solveRouting(routingInst *rst, int d, int n){
 
 			alt_seg_array[indx].edges[e] = ++first_edge_indx_v;
 			
-			rst->edgeUtils[ first_edge_indx_v ]++;	
+			rst->edgeUtils[ first_edge_indx_v ]++;
+
+				
 		    }
 		 	
 		  //Then vertical flat segment for cur_seg_array and horizonal flat segment for alt_seg_array
@@ -667,11 +670,14 @@ int solveRouting(routingInst *rst, int d, int n){
 			//delete [] alt_seg_array;
 
 		}
-		else
+		else if (L_FLAG==1)
 		{
+
+
 			for(int e=0; e<old_numEdges; e++)
 			{
 				rst->edgeUtils[alt_seg_array[indx-1].edges[e]]--;		//Reducing utilization of alt_seg edges because that route is being discarded
+			
 			}
 		}
 			
@@ -985,11 +991,15 @@ int ripnreroute(routingInst *rst){
 	 
    		point start_vertex = cur_seg_array[indx].p1;
 		point end_vertex   = cur_seg_array[indx].p2;
-		int *edges 	   = routatouille_astar( start_vertex, end_vertex , rst->gx , rst-> gy , edge_weights );
-		int size_of_edgearray = sizeof(edges)/sizeof(int);
-		cur_seg_array[indx].numEdges = size_of_edgearray;
-		for(int l=0; l<size_of_edgearray; l++)
-			cur_seg_array[indx].edges[l] = edges[l];
+		routatouille_astar( cur_seg_array[indx].edges , start_vertex, end_vertex ,rst->gx, rst->gy, edge_weights );
+
+		int num_edges = sizeof( cur_seg_array[indx].edges )/sizeof(int);
+
+		for (int l=0;l< num_edges ;l++) {
+
+			rst->edgeUtils[ cur_seg_array[indx].edges[l] ]++;
+
+		}
 
    
    	}  //end of segment for the current (for loop)
@@ -1053,13 +1063,13 @@ struct compare {
 };
 
 
-int *routatouille_astar ( point start_vertex, point end_vertex, int gx,int gy, int* edge_weights ) {
+void routatouille_astar ( int* edge_array,point start_vertex, point end_vertex, int gx, int gy,int* edge_weights ) {
 
    std::priority_queue <queue_elem, vector<queue_elem>, compare > min_queue;  //A* search min-queue
-   //std::priority_queue<queue_elem, comp> min_queue; 
-   std::unordered_map <point,int> distance_map;
-   std::unordered_map <int,point> distance_map2;
-   std::unordered_map <point,point> parent_map;
+   
+   std::map <point,int> distance_map;
+   std::map <int,point> distance_map2;
+   std::map <point,point> parent_map;
 
    std::set <point> processed_set; 
 
@@ -1113,7 +1123,7 @@ int *routatouille_astar ( point start_vertex, point end_vertex, int gx,int gy, i
 
     for( int k=0;k<4;k++) {
 
-	if ( (adj_points[k].x < 0)  || (adj_points [k].x >=gx) || (adj_points[k].y < 0)  || (adj_points [k].y >=gy) ) {
+	if ( (adj_points[k].x < 0)  || (adj_points [k].x >=gx) || (adj_points[k].y < 0)  || (adj_points [k].y >= gy) ) {
 
 			continue;
 
@@ -1213,9 +1223,10 @@ int *routatouille_astar ( point start_vertex, point end_vertex, int gx,int gy, i
 
  point p2 = parent_map[p1];
 
- int edgeID[ 10000 ] ;
-
  int k= 0;
+
+ int temp_edge[10000];
+
  while ( (p1.x != p2.x) || (p1.y!=p2.y)  ) {
 
  /* Find edge Ids between p1 and p2 */
@@ -1230,7 +1241,7 @@ int *routatouille_astar ( point start_vertex, point end_vertex, int gx,int gy, i
 		         source_y = p2.y;
                 }
                 
-         edgeID[k]  = ( p1.x*(gy - 1) + source_y + gy*(gx - 1) );
+         temp_edge[k]  = ( p1.x*(gy - 1) + source_y + gy*(gx-1) );
 
         }
         else 
@@ -1240,7 +1251,7 @@ int *routatouille_astar ( point start_vertex, point end_vertex, int gx,int gy, i
          	          source_x = p2.x;
                 }
                 
-          edgeID[k]  = ( p1.y)*(gx - 1) + source_x;
+           temp_edge[k]  = ( p1.y)*(gx - 1) + source_x;
         }
 
 
@@ -1252,8 +1263,18 @@ int *routatouille_astar ( point start_vertex, point end_vertex, int gx,int gy, i
    k++;
       
   }
+  
+  int *old_edgearray = edge_array;
 
- return edgeID;
+  delete [] old_edgearray;
+
+
+  edge_array = new int[k];
+
+  memcpy(edge_array,temp_edge,k);
+
+  
+
 
 }
 

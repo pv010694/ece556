@@ -18,18 +18,44 @@
 #include <fstream>
 #include <math.h>    // for sqrt
 #include <map>
-#include <unordered_map>
 #include <set>
+
 using namespace std;
-extern time_t start;
 
  /**
   * A structure to represent a 2D Point. 
   */
- typedef struct
+ typedef struct point_
  {
-   int x ; /* x coordinate ( >=0 in the routing grid)*/
-   int y ; /* y coordinate ( >=0 in the routing grid)*/
+ 
+ public: 
+
+  	int x ; /* x coordinate ( >=0 in the routing grid)*/
+  	int y ; /* y coordinate ( >=0 in the routing grid)*/
+
+
+	bool operator<(const point_ p2) const{
+		 if(x < p2.x)
+			 return true;
+		 else if(x > p2.x)
+			 return false;
+		 else
+			 return (y < p2.y);
+	 };
+
+	 bool operator!=(const point_ p2) const{
+		 if((x != p2.x) || (y != p2.y))
+			 return true;
+		 else
+			 return false;
+     	};
+
+	 bool operator==(const point_ p2) const{
+		 if((x == p2.x) && (y == p2.y))
+			 return true;
+		 else
+			 return false;
+	};
 
  } point ;
 
@@ -133,27 +159,6 @@ int solveRouting(routingInst *rst, int d, int n);
      output: 1 if successful, 0 otherwise 
   */
  int release(routingInst *rst);
-
-/*
-template< typename T, typename std::vector<T>,std::less<typename Container::value_type> >
-class custom_priority_queue : public std::priority_queue< T, std::vector<T>, std::less<typename Container::value_type>  >
-{
-  public:
-
-      bool remove(const T& value) {
-        auto it = std::find(this->c.begin(), this->c.end(), value);
-        if (it != this->c.end()) {
-            this->c.erase(it);
-            std::make_heap(this->c.begin(), this->c.end(), this->comp);
-            return true;
-       }
-       else {
-        return false;
-       }
- }
-};
-*/
-
 
 
 

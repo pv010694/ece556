@@ -3,6 +3,9 @@
 #include "ece556.h"
 #include <unistd.h>
 
+
+time_t start;  //store the starting time
+
 int main(int argc, char **argv)
 {
 
@@ -11,8 +14,11 @@ int main(int argc, char **argv)
  		return 1;
  	}
 	int opt,d,n;
-	time_t start = time(NULL);  //store the starting time
 	d=0;n=0;
+
+
+	start = time(NULL);  //store the starting time
+
 	while((opt = getopt (argc, argv, "d:n:"))!=-1)
 	{
 		//printf("d %d\n",atoi(&optarg[1]));
