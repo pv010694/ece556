@@ -11,11 +11,6 @@
 #include <string.h>
 #include <queue>
 
-#include <boost/graph/astar_search.hpp>
-#include <boost/graph/adjacency_list.hpp>
-#include <boost/graph/random.hpp>
-#include <boost/random.hpp>
-#include <boost/graph/graphviz.hpp>
 #include <sys/time.h>
 #include <vector>
 #include <list>
@@ -23,10 +18,8 @@
 #include <fstream>
 #include <math.h>    // for sqrt
 
-using namespace boost;
 using namespace std;
 
-time_t start, end, elapsed_time;   //global variable time 
 
  /**
   * A structure to represent a 2D Point. 
@@ -138,6 +131,29 @@ int solveRouting(routingInst *rst, int d, int n);
      output: 1 if successful, 0 otherwise 
   */
  int release(routingInst *rst);
+
+template< typename T, typename std::vector<T>,std::less<typename Container::value_type> >
+class custom_priority_queue : public std::priority_queue< T, std::vector<T>, std::less<typename Container::value_type>  >
+{
+  public:
+
+      bool remove(const T& value) {
+        auto it = std::find(this->c.begin(), this->c.end(), value);
+        if (it != this->c.end()) {
+            this->c.erase(it);
+            std::make_heap(this->c.begin(), this->c.end(), this->comp);
+            return true;
+       }
+       else {
+        return false;
+       }
+ }
+};
+
+
+
+
+
 
 
 #endif // ECE556_H

@@ -2,6 +2,8 @@
 
 #include "ece556.h"
 
+extern time_t start,end,elapsed_time;
+
 int readBenchmark(const char *fileName, routingInst *rst){
   char grid [128], capacity[128],num_nets[128];
   FILE *fp;
@@ -216,6 +218,7 @@ int readBenchmark(const char *fileName, routingInst *rst){
 
 
 
+int *routatouille_astar ( point start_vertex, point end_vertex, int gx,int gy, int* edge_weights );
 
 int ripnreroute(routingInst *rst);
 
@@ -854,12 +857,14 @@ int solveRouting(routingInst *rst, int d, int n){
 }
 
 
+
+
 int ripnreroute(routingInst *rst){
 
     int *edge_weights; //Edge weight array
     int *edge_ovfhist; //Edge overflow-history array
 
-
+   
     edge_weights = new int[rst->numEdges];
     edge_ovfhist = new int[rst->numEdges];
 
@@ -879,99 +884,10 @@ int ripnreroute(routingInst *rst){
     		edge_ovfhist[k] = 1;    // Initializing overflow history to 1 for each edge 
 
     }
-  //declarations
- 
-  typedef adjacency_list<listS, vecS, undirectedS, no_property,
-    property<edge_weight_t, int> > mygraph_t;
-  typedef property_map<mygraph_t, edge_weight_t>::type WeightMap;
-  typedef mygraph_t::vertex_descriptor vertex;
-  typedef mygraph_t::edge_descriptor edge_descriptor;
-  typedef mygraph_t::vertex_iterator vertex_iterator;
-  typedef std::pair<int, int> edge;
 
-struct found_goal {}; // exception for termination
 
-// visitor that terminates when we find the goal
-template <class Vertex>
-class astar_goal_visitor : public boost::default_astar_visitor
-{
-public:
-  astar_goal_visitor(Vertex goal) : m_goal(goal) {}
-  template <class Graph>
-  void examine_vertex(Vertex u, Graph& g) {
-    if(u == m_goal)
-      throw found_goal();
-  }
-private:
-  Vertex m_goal;
-};
 
-// manhattan distance heuristic
-template <class Graph, class CostType, point>
-class distance_heuristic : public astar_heuristic<Graph, CostType>
-{
-public:
-  typedef typename graph_traits<Graph>::vertex_descriptor Vertex;
-  distance_heuristic(point l, Vertex goal)
-    : m_location(l), m_goal(goal) {}
-  CostType operator()(Vertex u)
-  {
-  	int goal_y = m_goal/rst->gx; //FIXME
-  	int goal_x = m_goal%rst->gx;
-    CostType dx = abs(m_location.x - goal_x);
-    CostType dy = abs(m_location.y - goal_y);
-    return ::(dx + dy);
-  }
-private:
-  point m_location;
-  Vertex m_goal;
-};
-  //Creating Edges
-   Edge edge_array[rst->numEdges]; 
-  for(int j=0; j<rst->numEdges;j++)
-  {
-  	int edgeid = j;
-  	if  ( edgeid < ( rst->gy*(rst->gx-1) ) ) { //then horizontal edge
-			
-				int height = edgeid/( rst->gx - 1);
-				int source_x = edgeid - height*(rst->gx - 1);
-				int dest_x = source_x + 1;
-				int src_node_mapping = source_x + rst->gx*height;
-				//fprintf(fp,"(%d,%d)-(%d,%d)\n",source_x,height,dest_x,height);
-				edge_array[j]= edge(src_node_mapping, src_node_mapping+1);
-
-			}
-				
-
-			else 				  {  // then vertical edge
-	 			
-				int offset   =  (edgeid - rst->gy*(rst->gx-1) );
-				int width    =  offset/(rst->gy - 1);
-				int source_y =  offset - width*( rst->gy - 1);
-				int src_node_mapping = width + rst->gx*source_y;
-				edge_array[j]=edge(src_node_mapping,src_node_mapping+rst->gx);
-				//fprintf(fp,"(%d,%d)-(%d,%d)\n",width,source_y,width,source_y+1);
-			}
-	}
-
-    int num_arcs = rst->numEdges;
-    int num_nodes = rst->gx * rst-> gy;
-
-    //Creating graph
-    mygraph_t g(num_nodes);
-    WeightMap weightmap = get(edge_weights, g);
-    for(std::size_t j = 0; j < rst->numEdges; j++) {
-    edge_descriptor e;
-    bool inserted;
-    tie(e, inserted) = add_edge(edge_array[j].first,
-                                edge_array[j].second, g);
-    weightmap[e] = edge_weights[j];
-  }
   /* Start ripnreroute loop */
-
-  //int ticks = 100000000;
-  //int cur_ticks = 0;
-  
 
   
   do {
@@ -1069,53 +985,11 @@ private:
 	 
    		point start_vertex = cur_seg_array[indx].p1;
 		point end_vertex   = cur_seg_array[indx].p2;
+		int *edges 	   = routatouille_astar( start_vertex, end_vertex , rst->gx , rst-> gy , edge_weights );
 
-		int src_node = start_vertex.y * rst->gx + start_vertex.x;
-		int dst_node = end_vertex.y * rst->gx + end_vertex.x;
-
-		vector<mygraph_t::vertex_descriptor> p(num_vertices(g));  
-		vector<int>d(num_vertices(g));
-
-		try {
-
-						//calling astar here
-			astar_search(g, src_node, distance_heuristic<mygraph_t,int, location*>(locations, dst_node), 
-				predecessor_map(&p[0]).distance_map(&d[0]).visitor(astar_goal_visitor<vertex>(goal)));
-
-		} catch(found_goal fg) { // found a path to the goal
-    list<vertex> shortest_path;
-    for(vertex v = goal;; v = p[v]) {
-      shortest_path.push_front(v);
-      if(p[v] == v)
-        break;
-    }
-    list<vertex>::iterator spi = shortest_path.begin();
- 	int e=0;
-    for(++spi; spi != shortest_path.end(); ++spi)
-      { int vert = *spi;
-      	int vert2 = *(spi+1);
-      	int src_x = vert%rst->gx;
-      	int src_y = vert/rst->gx;
-      	int src_x2 = vert2%rst->gx;
-      	int src_y2 = vert2/rst->gx;
-      	int source_y,source_x;
-      	int edge_indx;
-      	if(src_x == src_x2)
-      	{
-        	if ( src_y2 > src_y )
-				source_y = src_y;
-		edge_indx	     = ( src_x)*(rst->gy - 1) + source_y + rst->gy * (rst->gx - 1) );
-		}
-		else 
-      	{
-        	if ( src_x2 > src_x )
-				source_x = src_x;
-		edge_indx	     = ( src_y)*(rst->gx - 1) + source_x;
-		}
-		cur_seg_array[indx].edges[e++] = edge_indx;
-	  }
-	} //end of catch
-   }  //end of segment for the current (for loop)
+   
+   	}  //end of segment for the current (for loop)
+  
   }// for all nets
 	
    /* Updating edge weights at end of current iteration */
@@ -1139,14 +1013,6 @@ private:
 
     }
 
-  for(std::size_t j = 0; j < rst->numEdges; j++) {
-    edge_descriptor e;
-    bool inserted;
-    tie(e, inserted) = add_edge(edge_array[j].first,
-                                edge_array[j].second, g);
-    weightmap[e] = edge_weights[j];
-  }
-
    end = time(NULL);
    elapsed_time = difftime(end, start); 
 
@@ -1156,6 +1022,236 @@ private:
   return 0;
 
 }
+
+
+typedef struct {
+
+
+  point vertex;
+  int distance;
+
+
+} queue_elem;
+
+struct compare {
+
+ bool operator() (const queue_elem &l, const queue_elem &r ) {
+
+ {
+
+	return l.distance > r.distance;
+
+ }
+
+}
+
+}
+
+
+
+int *routatouille_astar ( point start_vertex, point end_vertex, int gx,int gy, int* edge_weights ) {
+
+   custom_priority_queue <queue_elem, vector<queue_elem>, compare > min_queue;  //A* search min-queue
+   
+   std::unordered_map <point,int> distance_map;
+   std::unordered_map <int,point> distance_map2;
+   std::unordered_map <point,point> parent_map;
+
+   std::set <point> processed_set; 
+
+   queue_elem init;
+
+   init.vertex = start_vertex;
+   init.distance = 0;
+   min_queue.push( init );
+
+   distance_map[ start_vertex ] = 0 ;
+   distance_map2[ 0 ] = start_vertex;
+   parent_map [ start_vertex ] = start_vertex;
+
+
+  while ( min_queue.empty() == false ) {
+
+
+    queue_elem cur_elem = min_queue.top();
+    min_queue.pop();
+
+    point cur_vertex = cur_elem.vertex;
+    int cur_distance = cur_elem.distance;
+
+
+    if ( cur_vertex == end_vertex ) {
+
+	//return the predecessor map
+	break;
+
+
+      }
+
+     point adj_points[4];
+     
+
+     adj_points[0].x = cur_vertex.x+1;
+     adj_points[0].y = cur_vertex.y;
+
+     
+     adj_points[1].x = cur_vertex.x-1;
+     adj_points[1].y = cur_vertex.y;
+
+
+     adj_points[2].x = cur_vertex.x;
+     adj_points[2].y = cur_vertex.y+1;
+
+   
+     adj_points[3].x = cur_vertex.x;
+     adj_points[3].y = cur_vertex.y-1;
+
+
+    for( int k=0;k<4;k++) {
+
+	if ( (adj_points[k].x < 0)  || (adj_points [k].x >=gx) || (adj_points[k].y < 0)  || (adj_points [k].y >=gy) ) {
+
+			continue;
+
+        }
+
+        point adj_vertex = adj_point[k];
+	
+        if ( processed_set[ adj_vertex ].count() > 0 ) {
+	
+				continue;
+	}
+
+       int edge_indx,source_x,source_y;
+
+	if( cur_vertex.x == adj_vertex.x )
+        {
+                if ( cur_vertex.y > adj_vertex.y ) {
+            
+		         source_y = adj_vertex.y;
+                }
+                
+                edge_indx = ( cur_vertex.x*(gy - 1) + source_y + gy*(gx - 1) );
+
+        }
+        else 
+        {
+                if ( cur_vertex.x > adj_vertex.x ) {
+                 
+         	          source_x = adj_vertex.x;
+                }
+                
+                edge_indx = ( cur_vertex.y)*(gx - 1) + source_x;
+        }
+	
+
+	int manhattan_distance = abs( cur_vertex.x - adj_vertex.x ) + abs( cur_vertex.y - adj_vertex.y );
+	
+	int adj_distance = cur_distance + edge_weights[ edge_indx ] + manhattan_distance;
+	
+         queue_elem adj_elem;
+	 adj_elem.vertex = adj_vertex;
+         adj_elem.distance = adj_distance;
+
+
+	if ( distance_map.count( adj_vertex ) == 0 ) {
+
+	/* Visiting this vertex for first time */
+
+	 distance_map[ adj_vertex ]  =  adj_distance;
+	 distance_map2[ adj_distance ] = adj_vertex;
+  	 parent_map[ adj_vertex ] = cur_vertex;
+	
+	  
+	 min_queue.push ( adj_elem );
+
+	}
+
+	else {
+
+	   int prev_adj_distance = distance_map [ adj_vertex ];
+	  
+	   if ( prev_adj_distance > adj_distance ) {
+		
+		queue_elem del_elem;
+
+		del_elem.vertex = adj_vertex;
+		del_elem.distance = prev_adj_distance;
+
+		min_queue.remove( del_elem );
+	
+		parent_map [ adj_vertex ] = cur_vertex;
+		min_queue.push ( adj_elem );
+		distance_map[ adj_vertex ] = adj_distance;
+		
+		distance_map2[ adj_distance ] = adj_vertex;
+
+	   }
+
+	}
+			
+		
+	 
+	
+     }//end of adj-elem loop
+
+
+    processed_set.insert ( cur_vertex );
+
+
+  }// end of queue while
+		
+
+
+
+ point p1 = end_vertex;
+
+ point p2 = parent_map[p1];
+
+ int edgeID[ 10000 ] ;
+
+ int k= 0;
+ while ( p1 != p2  ) {
+
+ /* Find edge Ids between p1 and p2 */
+
+  
+       int edge_indx,source_x,source_y;
+
+	if( p1.x == p2.x )
+        {
+                if ( p1.y > p2.y ) {
+            
+		         source_y = p2.y;
+                }
+                
+         edgeID[k]  = ( p1.x*(gy - 1) + source_y + gy*(gx - 1) );
+
+        }
+        else 
+        {
+                if ( p1.x > p2.x ) {
+                 
+         	          source_x = p2.x;
+                }
+                
+          edgeID[k]  = ( p1.y)*(gx - 1) + source_x;
+        }
+
+
+
+   p1 = p2;
+   p2 = parent_map[p1]; 
+
+      
+   k++;
+      
+  }
+
+ return edgeID;
+
+}
+
 
 
 int writeOutput(const char *outRouteFile, routingInst *rst){
