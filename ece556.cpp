@@ -37,8 +37,12 @@ int readBenchmark(const char *fileName, routingInst *rst){
 
   /* Filling edge utilization array by zero */
 
-  memset( rst->edgeUtils, 0 , rst->numEdges );
+  for(int k=0;k< rst->numEdges; k++) {
 
+	rst->edgeUtils[ k ] = 0;
+
+ }
+ 
   //Parsing capacity
   count=0;
   token = strtok(capacity," \t\n");
@@ -51,8 +55,12 @@ int readBenchmark(const char *fileName, routingInst *rst){
   }
 
   /* Filling default capacity for each edge */
+  
+  for(int k=0;k< rst->numEdges; k++) {
 
-  memset( rst->edgeCaps, rst->cap , rst->numEdges );
+	rst->edgeCaps[ k ] = rst->cap;
+
+ }
 
   //Parsing num-nets
   count=0;
@@ -219,15 +227,15 @@ int readBenchmark(const char *fileName, routingInst *rst){
 
 
 
-void routatouille_astar ( int* edge_array,point start_vertex, point end_vertex, int gx, int gy,int* edge_weights );
 
 int ripnreroute(routingInst *rst);
 
+int routatouille_astar ( int*edge_array,point start_vertex, point end_vertex, int gx, int gy,int* edge_weights );
 
 int solveRouting(routingInst *rst, int d, int n){
   /*********** TO BE FILLED BY YOU **********/
 
- if(n==0 && d==0)					//Part 1 solution
+ if( (n==0 && d==0) || (n==1 && d==0) )					//Part 1 solution
  {
  net *net_array = rst->nets;
 
@@ -896,6 +904,7 @@ int ripnreroute(routingInst *rst){
   /* Start ripnreroute loop */
 
   elapsed_time = 0;
+
   do {
 
    /* Finding the nets with overflow */
@@ -908,11 +917,11 @@ int ripnreroute(routingInst *rst){
 
    for(int k=0;k<rst->numNets;k++) {
 
-	segment *cur_seg_array = net_array[k].nroute.segments;
+	segment *cur_seg_array = rst->nets[k].nroute.segments;
 	
 	net_cost = 0;
 
-	for(int j=0;j<net_array[k].nroute.numSegs;j++) {
+	for(int j=0;j<rst->nets[k].nroute.numSegs;j++) {
 
 		int *edgearray = cur_seg_array[j].edges;
 		int numEdges = cur_seg_array[j].numEdges;
@@ -939,7 +948,7 @@ int ripnreroute(routingInst *rst){
   /* Rip-up and reroute the bad nets  */
 
 
-   while ( net_indxQ.empty() == false ) {
+   while ( (net_indxQ.empty() == false) && (elapsed_time < 100) ) {
 
 	int net_indx = net_indxQ.top();
 
@@ -991,11 +1000,30 @@ int ripnreroute(routingInst *rst){
 	 
    		point start_vertex = cur_seg_array[indx].p1;
 		point end_vertex   = cur_seg_array[indx].p2;
-		routatouille_astar( cur_seg_array[indx].edges , start_vertex, end_vertex ,rst->gx, rst->gy, edge_weights );
 
-		int num_edges = sizeof( cur_seg_array[indx].edges )/sizeof(int);
+                int temp_edgearray[10000];
 
-		for (int l=0;l< num_edges ;l++) {
+		int num_edges = routatouille_astar( temp_edgearray , start_vertex, end_vertex ,rst->gx, rst->gy, edge_weights );
+		
+                /*Updating the edge array*/
+		
+  		int *old_edgearray = cur_seg_array[indx].edges;
+
+  		delete [] old_edgearray;
+
+  		cur_seg_array[indx].edges = new int[num_edges];
+
+		for(int e=0;e<num_edges;e++) {
+
+			cur_seg_array[indx].edges[e] = temp_edgearray[e];
+
+		}
+	
+		cur_seg_array[ indx ].numEdges = num_edges;
+		
+		/*Updating edgeUtils*/
+	
+		for (int l=0;l<num_edges ;l++) {
 
 			rst->edgeUtils[ cur_seg_array[indx].edges[l] ]++;
 
@@ -1003,11 +1031,9 @@ int ripnreroute(routingInst *rst){
 
    
    	}  //end of segment for the current (for loop)
-  
-  }// for all nets
-	
+
+
    /* Updating edge weights at end of current iteration */
-   //FIXME: Do we need to update edge weights at every iteration?? This could be done only when a net is ripped up 
     for (int k=0;k< rst->numEdges; k++) {
 
 		int overflow = rst->edgeUtils[k] - rst->edgeCaps[k];
@@ -1026,11 +1052,16 @@ int ripnreroute(routingInst *rst){
 
 
     }
-
+	
+   	end_time = time(NULL);
+   	elapsed_time = difftime(end_time, start); 
+  
+  }// for all nets
+	
    end_time = time(NULL);
    elapsed_time = difftime(end_time, start); 
 
-   } while (elapsed_time < 90);
+   } while (elapsed_time < 100);
 
 
   return 0;
@@ -1063,12 +1094,11 @@ struct compare {
 };
 
 
-void routatouille_astar ( int* edge_array,point start_vertex, point end_vertex, int gx, int gy,int* edge_weights ) {
+int routatouille_astar ( int*edge_array,point start_vertex, point end_vertex, int gx, int gy,int* edge_weights ) {
 
    std::priority_queue <queue_elem, vector<queue_elem>, compare > min_queue;  //A* search min-queue
    
    std::map <point,int> distance_map;
-   std::map <int,point> distance_map2;
    std::map <point,point> parent_map;
 
    std::set <point> processed_set; 
@@ -1080,7 +1110,6 @@ void routatouille_astar ( int* edge_array,point start_vertex, point end_vertex, 
    min_queue.push( init );
 
    distance_map[ start_vertex ] = 0 ;
-   distance_map2[ 0 ] = start_vertex;
    parent_map [ start_vertex ] = start_vertex;
 
 
@@ -1096,11 +1125,10 @@ void routatouille_astar ( int* edge_array,point start_vertex, point end_vertex, 
 
     if ( (cur_vertex.x == end_vertex.x ) && (cur_vertex.y == end_vertex.y)) {
 
-	//return the predecessor map
+	//trace the predecessor map and populate edges
 	break;
+     }
 
-
-      }
 
      point adj_points[4];
      
@@ -1123,24 +1151,28 @@ void routatouille_astar ( int* edge_array,point start_vertex, point end_vertex, 
 
     for( int k=0;k<4;k++) {
 
-	if ( (adj_points[k].x < 0)  || (adj_points [k].x >=gx) || (adj_points[k].y < 0)  || (adj_points [k].y >= gy) ) {
+        //Check for bounds
+	if ( (adj_points[k].x < 0)  || (adj_points[k].x >=gx) || (adj_points[k].y < 0)  || (adj_points[k].y >= gy) ) {
 
-			continue;
+		continue;
 
         }
 
         point adj_vertex = adj_points[k];
 	
+	//Already processed
         if ( processed_set.count(adj_vertex) > 0 ) {
 	
-				continue;
+		continue;
 	}
 
        int edge_indx,source_x,source_y;
 
 	if( cur_vertex.x == adj_vertex.x )
         {
-                if ( cur_vertex.y > adj_vertex.y ) {
+		source_y = cur_vertex.y;
+        
+	        if ( cur_vertex.y > adj_vertex.y ) {
             
 		         source_y = adj_vertex.y;
                 }
@@ -1150,6 +1182,8 @@ void routatouille_astar ( int* edge_array,point start_vertex, point end_vertex, 
         }
         else 
         {
+		source_x = cur_vertex.x;
+
                 if ( cur_vertex.x > adj_vertex.x ) {
                  
          	          source_x = adj_vertex.x;
@@ -1173,9 +1207,7 @@ void routatouille_astar ( int* edge_array,point start_vertex, point end_vertex, 
 	/* Visiting this vertex for first time */
 
 	 distance_map[ adj_vertex ]  =  adj_distance;
-	 distance_map2[ adj_distance ] = adj_vertex;
   	 parent_map[ adj_vertex ] = cur_vertex;
-	
 	  
 	 min_queue.push ( adj_elem );
 
@@ -1187,19 +1219,13 @@ void routatouille_astar ( int* edge_array,point start_vertex, point end_vertex, 
 	  
 	   if ( prev_adj_distance > adj_distance ) {
 		
-		queue_elem del_elem;
-
-		del_elem.vertex = adj_vertex;
-		del_elem.distance = prev_adj_distance;
-
+		//No need to remove from queue
 		//min_queue.remove( del_elem );
-		//Do we need to delete previous vertex from parent_map? No.
 
 		parent_map [ adj_vertex ] = cur_vertex;
 		min_queue.push ( adj_elem );
 		distance_map[ adj_vertex ] = adj_distance;
 		
-		distance_map2[ adj_distance ] = adj_vertex;
 
 	   }
 
@@ -1217,17 +1243,15 @@ void routatouille_astar ( int* edge_array,point start_vertex, point end_vertex, 
   }// end of queue while
 		
 
-
+ /*Retrace predecessor map and populate edges*/
 
  point p1 = end_vertex;
 
  point p2 = parent_map[p1];
 
- int k= 0;
+ int k=0;
 
- int temp_edge[10000];
-
- while ( (p1.x != p2.x) || (p1.y!=p2.y)  ) {
+ while ( (p1.x != p2.x) ||  (p1.y!=p2.y)  ) {
 
  /* Find edge Ids between p1 and p2 */
 
@@ -1236,22 +1260,27 @@ void routatouille_astar ( int* edge_array,point start_vertex, point end_vertex, 
 
 	if( p1.x == p2.x )
         {
-                if ( p1.y > p2.y ) {
+               source_y = p1.y;
+
+	       if ( p1.y > p2.y ) {
             
-		         source_y = p2.y;
+		    source_y = p2.y;
                 }
                 
-         temp_edge[k]  = ( p1.x*(gy - 1) + source_y + gy*(gx-1) );
+         edge_array[k]  = ( p1.x*(gy-1) + source_y + gy*(gx-1) );
 
         }
-        else 
+        
+	else 
         {
-                if ( p1.x > p2.x ) {
+                source_x = p1.x;
+
+		if ( p1.x > p2.x ) {
                  
-         	          source_x = p2.x;
+         	     source_x = p2.x;
                 }
                 
-           temp_edge[k]  = ( p1.y)*(gx - 1) + source_x;
+           edge_array[k]  = ( p1.y*(gx-1) + source_x );
         }
 
 
@@ -1263,17 +1292,10 @@ void routatouille_astar ( int* edge_array,point start_vertex, point end_vertex, 
    k++;
       
   }
-  
-  int *old_edgearray = edge_array;
+ 
+  int numEdges = k;
 
-  delete [] old_edgearray;
-
-
-  edge_array = new int[k];
-
-  memcpy(edge_array,temp_edge,k);
-
-  
+  return numEdges; 
 
 
 }
