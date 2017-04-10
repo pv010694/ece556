@@ -473,6 +473,7 @@ int solveRouting(routingInst *rst, int d, int n){
 	int L_FLAG=0;
         point p_int, p_int2;
 	point oldp_int, oldp_int2;
+	point p_prev;
         int old_numEdges;	
   	if( pins[corner_pin_index].y == pins[nearest_pin_index].y )
 	{
@@ -481,6 +482,7 @@ int solveRouting(routingInst *rst, int d, int n){
 		p_int.x = pins[nearest_pin_index].x;
 		p_int.y = pins[nearest_pin_index].y;
 		oldp_int = p_int;
+		p_prev = p_int;
 		int numEdges = abs(pins[corner_pin_index].x - pins[nearest_pin_index].x);
 		//indx=0;
 		cur_seg_array[indx].numEdges = numEdges;
@@ -511,6 +513,7 @@ int solveRouting(routingInst *rst, int d, int n){
 		p_int.x = pins[nearest_pin_index].x;
 		p_int.y = pins[nearest_pin_index].y;
 		oldp_int = p_int;
+		p_prev= p_int;
 		/*Vertical flat segment*/
 
 		int numEdges		     = abs(pins[corner_pin_index].y - pins[nearest_pin_index].y);
@@ -550,6 +553,7 @@ int solveRouting(routingInst *rst, int d, int n){
 		  
 		  oldp_int = p_int;
 		  oldp_int2 = p_int2;
+		  p_prev = pins[nearest_pin_index];
 
 		  int numEdges = abs(pins[corner_pin_index].x - p_int.x) + abs(pins[nearest_pin_index].y - p_int.y);
 		  cur_seg_array[indx].numEdges = numEdges;
@@ -665,6 +669,9 @@ int solveRouting(routingInst *rst, int d, int n){
 		}
 	}
 	flag[nearest_pin_index]=1;
+
+		if(L_FLAG==1)
+		{
 		//FIXME: Do I need old and new copies of p_int and p_int2??
 		if(delete_flag==1)			//The best connection out of the two is chosen in cur_seg_array if there's 2 options available
 		{
@@ -676,7 +683,7 @@ int solveRouting(routingInst *rst, int d, int n){
 			}
 			oldp_int.x= p_int2.x;	oldp_int.y=p_int2.y;
 			delete_flag=0;
-			//delete [] alt_seg_array;
+			//Connect p_prev with oldp_int
 
 		}
 		else if (L_FLAG==1)
@@ -688,9 +695,91 @@ int solveRouting(routingInst *rst, int d, int n){
 				rst->edgeUtils[alt_seg_array[indx-1].edges[e]]--;		//Reducing utilization of alt_seg edges because that route is being discarded
 			
 			}
+
+			//connect p_prev with oldp_int
 		}
-			
 		L_FLAG=0;
+		//Connect oldp_int with p_prev here instead
+		if(d==1)
+		{	
+		//////////////////////////////////////////////////////////////////////////////////////////////////
+		////////////////ADDED LOGIC TO ENSURE THERE'S NO DANGLING NODES//////////////////////////////////
+		////////////////////////////////////////////////////////////////////////////////////////////////
+		int extra_edges = 0;
+		int z=0;
+		if(oldp_int.x == p_prev.x)
+			extra_edges = abs(oldp_int.y - p_prev.y);
+		else
+			extra_edges = abs(oldp_int.x - p_prev.x);
+
+		int *temp_arr = new int [old_numEdges+ extra_edges];
+		for(z=0;z<old_numEdges;z++)
+			temp_arr[z] = cur_seg_array[indx-1].edges[z];
+
+		if(oldp_int.x == p_prev.x)
+		{
+			int source_y = oldp_int.y;
+			if ( oldp_int.y > p_prev.y )
+			source_y = p_prev.y;
+	
+		int first_edge_indx	     = ( (oldp_int.x)*(rst->gy - 1) + source_y + rst->gy * (rst->gx - 1) );
+
+		temp_arr[z] = first_edge_indx;
+		z++;
+		rst->edgeUtils[ first_edge_indx ]++;	
+
+		for(int E=z; E< old_numEdges+extra_edges; E++) {
+
+			temp_arr[E] = ++first_edge_indx;
+			
+			rst->edgeUtils[ first_edge_indx ]++;	
+		    }
+		delete [] cur_seg_array[indx-1].edges;
+			
+		cur_seg_array[indx-1].edges = new int [old_numEdges + extra_edges];
+		
+		for(z=0; z<old_numEdges + extra_edges; z++)
+			cur_seg_array[indx-1].edges[z] = temp_arr[z];
+
+			cur_seg_array[indx-1].numEdges = old_numEdges + extra_edges;
+		}
+	
+		else
+		{
+			int source_x = oldp_int.x;
+
+			if ( oldp_int.x > p_prev.x )
+				source_x = p_prev.x;
+
+			int first_edge_indx	     = ( (oldp_int.y)*(rst->gx - 1) + source_x );
+	
+   	   	   	temp_arr[z] = first_edge_indx;
+			z++;
+			rst->edgeUtils[ first_edge_indx ]++;	
+	
+			for(int E=z; E< old_numEdges+extra_edges; E++) {
+
+			temp_arr[E] = ++first_edge_indx;
+			
+			rst->edgeUtils[ first_edge_indx ]++;	
+		    }
+		delete [] cur_seg_array[indx-1].edges;
+			
+		cur_seg_array[indx-1].edges = new int [old_numEdges + extra_edges];
+		
+		for(z=0; z<old_numEdges + extra_edges; z++)
+			cur_seg_array[indx-1].edges[z] = temp_arr[z];
+		cur_seg_array[indx-1].numEdges = old_numEdges + extra_edges;
+		}
+		delete[] temp_arr;
+		}
+		}
+		/////////////////////////////////////////////////////////////////
+		//////////////END OF LOGIC FOR DANGLING NODES///////////////////
+		///////////////////////////////////////////////////////////////	
+			
+
+		
 		
 		if( oldp_int.y == pins[nearest_pin_index].y )
 	{
@@ -724,6 +813,7 @@ int solveRouting(routingInst *rst, int d, int n){
 
  		oldp_int = p_int;
 		old_numEdges = numEdges;
+		p_prev = pins[nearest_pin_index];
 	}
 
 		else if ( oldp_int.x == pins[nearest_pin_index].x) {
@@ -755,8 +845,9 @@ int solveRouting(routingInst *rst, int d, int n){
 			
 			rst->edgeUtils[ first_edge_indx ]++;	
 		    }
-		p_int = oldp_int;
+		oldp_int = p_int;  //changed this. It was the other way around
 		old_numEdges = numEdges;
+		p_prev = pins[nearest_pin_index];
 		}
 	
 		else   {
@@ -847,7 +938,8 @@ int solveRouting(routingInst *rst, int d, int n){
 		    }
 
 		oldp_int = p_int; oldp_int2= p_int2;
-		old_numEdges = numEdges;	
+		old_numEdges = numEdges;
+		p_prev = pins[nearest_pin_index];	
 		} //end of L-shaped else	
 
 		
@@ -862,7 +954,7 @@ int solveRouting(routingInst *rst, int d, int n){
 
   if( n == 1) {
 
-	ripnreroute( rst );
+     ripnreroute( rst );
  
    }
 
@@ -913,9 +1005,13 @@ int ripnreroute(routingInst *rst){
   
    net *net_array = rst->nets;
 
-   int net_cost=0;
+   //int net_cost=0;
    std::priority_queue <int> net_indxQ;  //Using a max-queue to store net indices in descending order
 
+   
+
+   
+    int net_cost=0;
    for(int k=0;k<rst->numNets;k++) {
 
 	segment *cur_seg_array = rst->nets[k].nroute.segments;
@@ -930,6 +1026,7 @@ int ripnreroute(routingInst *rst){
 		for (int l=0;l<numEdges;l++) {
 
 			int edgeid = edgearray[l];			
+		//	printf("Debug: rst->nets[%d]  - cur_seg_array[%d].edges[%d] = %d\n",k,j,l,edgeid);//for debug
 			net_cost  += edge_weights[ edgeid ];
 
 		}
@@ -947,9 +1044,11 @@ int ripnreroute(routingInst *rst){
   
 
   /* Rip-up and reroute the bad nets  */
+  
+  
+  
 
-
-   while ( (net_indxQ.empty() == false) && (elapsed_time < 100) ) {
+   while ( (net_indxQ.empty() == false) && (elapsed_time < 100) ){
 
 	int net_indx = net_indxQ.top();
 
@@ -1054,8 +1153,8 @@ int ripnreroute(routingInst *rst){
 
     }
 	
-   	end_time = time(NULL);
-   	elapsed_time = difftime(end_time, start); 
+    end_time = time(NULL);
+   elapsed_time = difftime(end_time, start);   	
   
   }// for all nets
 	
