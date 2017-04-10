@@ -3,7 +3,8 @@
 #include "ece556.h"
 
 extern time_t start;
-time_t end_time,elapsed_time;
+time_t end_time;
+double elapsed_time;
 
 int readBenchmark(const char *fileName, routingInst *rst){
   char grid [128], capacity[128],num_nets[128];
@@ -903,7 +904,7 @@ int ripnreroute(routingInst *rst){
 
   /* Start ripnreroute loop */
 
-  elapsed_time = 0;
+  
 
   do {
 
