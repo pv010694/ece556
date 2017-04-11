@@ -474,7 +474,8 @@ int solveRouting(routingInst *rst, int d, int n){
         point p_int, p_int2;
 	point oldp_int, oldp_int2;
 	point p_prev;
-        int old_numEdges;	
+        int old_numEdges;
+	cur_seg_array[indx].p1 = corner_pin;	
   	if( pins[corner_pin_index].y == pins[nearest_pin_index].y )
 	{
 		/*Horizontal flat segment*/
@@ -706,7 +707,10 @@ int solveRouting(routingInst *rst, int d, int n){
 		////////////////ADDED LOGIC TO ENSURE THERE'S NO DANGLING NODES//////////////////////////////////
 		////////////////////////////////////////////////////////////////////////////////////////////////
 		int extra_edges = 0;
-		int z=0;
+		int z=0; 
+		//point p1_cpy,p2_cpy;
+		//p1_cpy = cur_seg_array[indx-1].p1;
+		//p2_cpy = cur_seg_array[indx-1].p2;
 		if(oldp_int.x == p_prev.x)
 			extra_edges = abs(oldp_int.y - p_prev.y);
 		else
@@ -770,6 +774,8 @@ int solveRouting(routingInst *rst, int d, int n){
 		for(z=0; z<old_numEdges + extra_edges; z++)
 			cur_seg_array[indx-1].edges[z] = temp_arr[z];
 		cur_seg_array[indx-1].numEdges = old_numEdges + extra_edges;
+		//cur_seg_array[indx-1].p1 = p1_cpy;
+		//cur_seg_array[indx-1].p2 = p2_cpy;
 		}
 		delete[] temp_arr;
 		}
@@ -944,6 +950,7 @@ int solveRouting(routingInst *rst, int d, int n){
 
 		
     }
+		cur_seg_array[indx].p2 = pins[nearest_pin_index];
 	
 
   }	//end of for-loop	
