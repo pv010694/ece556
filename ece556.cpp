@@ -476,7 +476,8 @@ int solveRouting(routingInst *rst, int d, int n){
 	point p_prev;
         int old_numEdges;
 	cur_seg_array[indx].p1 = corner_pin;	
-  	if( pins[corner_pin_index].y == pins[nearest_pin_index].y )
+  	cur_seg_array[indx].p2 = pins[nearest_pin_index];
+	if( pins[corner_pin_index].y == pins[nearest_pin_index].y )
 	{
 		/*Horizontal flat segment*/
 		// point p_int;
@@ -671,8 +672,8 @@ int solveRouting(routingInst *rst, int d, int n){
 	}
 	flag[nearest_pin_index]=1;
 
-		if(L_FLAG==1)
-		{
+		//if(L_FLAG==1)
+		//{
 		//FIXME: Do I need old and new copies of p_int and p_int2??
 		if(delete_flag==1)			//The best connection out of the two is chosen in cur_seg_array if there's 2 options available
 		{
@@ -701,8 +702,10 @@ int solveRouting(routingInst *rst, int d, int n){
 		}
 		L_FLAG=0;
 		//Connect oldp_int with p_prev here instead
+		/*
 		if(d==1)
-		{	
+		{
+			
 		//////////////////////////////////////////////////////////////////////////////////////////////////
 		////////////////ADDED LOGIC TO ENSURE THERE'S NO DANGLING NODES//////////////////////////////////
 		////////////////////////////////////////////////////////////////////////////////////////////////
@@ -779,13 +782,14 @@ int solveRouting(routingInst *rst, int d, int n){
 		}
 		delete[] temp_arr;
 		}
-		}
+		}*/
 		/////////////////////////////////////////////////////////////////
 		//////////////END OF LOGIC FOR DANGLING NODES///////////////////
 		///////////////////////////////////////////////////////////////	
 			
 
-		
+	       cur_seg_array[indx].p1 = p_prev;
+		cur_seg_array[indx].p2 = pins[nearest_pin_index];	
 		
 		if( oldp_int.y == pins[nearest_pin_index].y )
 	{
@@ -950,7 +954,7 @@ int solveRouting(routingInst *rst, int d, int n){
 
 		
     }
-		cur_seg_array[indx].p2 = pins[nearest_pin_index];
+	
 	
 
   }	//end of for-loop	
@@ -1055,7 +1059,7 @@ int ripnreroute(routingInst *rst){
   
   
 
-   while ( (net_indxQ.empty() == false) && (elapsed_time < 100) ){
+   while ( (net_indxQ.empty() == false) && (elapsed_time < 900) ){
 
 	int net_indx = net_indxQ.top();
 

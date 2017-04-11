@@ -22,10 +22,14 @@
 
 using namespace std;
 
- /**
-  * A structure to represent a 2D Point. 
+
+  /**
+  * A structure to represent a 2D Point.
+
+  * Operator functions added for map data structure in A* algorithm 
   */
- typedef struct point_
+
+ typedef struct __point_
  {
  
  public: 
@@ -34,27 +38,58 @@ using namespace std;
   	int y ; /* y coordinate ( >=0 in the routing grid)*/
 
 
-	bool operator<(const point_ p2) const{
-		 if(x < p2.x)
-			 return true;
-		 else if(x > p2.x)
+	bool operator< (const __point_ pcomp) const{
+
+		if( x == pcomp.x) {
+
+			if ( y < pcomp.y ) {
+			
+				return true;
+			}
+			else {
+
+				return false;
+
+			 }
+
+		}
+
+	       else if(x > pcomp.x) {
+		
 			 return false;
-		 else
-			 return (y < p2.y);
+		}
+
+		 else {
+
+			 return true;
+		}
+
+
 	 };
 
-	 bool operator!=(const point_ p2) const{
-		 if((x != p2.x) || (y != p2.y))
+	 bool operator!= (const __point_ pcomp) const{
+
+		 if( (x != pcomp.x) || (y != pcomp.y) ) {
+		
 			 return true;
-		 else
+		 }
+		 else {
 			 return false;
+
+		}
      	};
 
-	 bool operator==(const point_ p2) const{
-		 if((x == p2.x) && (y == p2.y))
+	 bool operator== (const __point_ pcomp) const{
+
+		 if((x == pcomp.x) && (y == pcomp.y)) {
+
 			 return true;
-		 else
+
+		}
+		 else {
 			 return false;
+		}
+
 	};
 
  } point ;
