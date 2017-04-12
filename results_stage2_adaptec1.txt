@@ -1,0 +1,19 @@
+Adaptec1
+
+d=0,n=0
+total wirelength is 5465212
+total overflow is 1669008
+
+
+d=0,n=1
+total wirelength is 5807083
+total overflow is 1536683
+
+d=1,n=0 ( net_decomposition heuristic )
+total wirelength is 3720449
+total overflow is 650682
+
+d=1,n=1
+total wirelength is 4157957
+total overflow is 462976
+

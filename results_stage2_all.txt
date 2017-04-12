@@ -1,0 +1,96 @@
+tux-38:~/Desktop/ECE556/ece556$ ./556_eval.exe adaptec1.gr adaptec1_15mins_n0_d0_new 0
+Parsing benchmark....
+Reading solution...
+All nets connected!
+total wirelength is 5465212
+total overflow is 1669008
+
+DONE!
+tux-38:~/Desktop/ECE556/ece556$ gvim results_stage2.txt 
+tux-38:~/Desktop/ECE556/ece556$ ./556_eval.exe adaptec1.gr adaptec1_15mins_n1_d0_new 0
+Parsing benchmark....
+Reading solution...
+All nets connected!
+total wirelength is 5807083
+total overflow is 1536683
+
+DONE!
+tux-38:~/Desktop/ECE556/ece556$ ./556_eval.exe adaptec1.gr adaptec1_15mins_n0_d1_new 0
+Parsing benchmark....
+Reading solution...
+All nets connected!
+total wirelength is 3720449
+total overflow is 650682
+
+DONE!
+tux-38:~/Desktop/ECE556/ece556$ ./556_eval.exe adaptec1.gr adaptec1_15mins_n1_d1_new 0
+Parsing benchmark....
+Reading solution...
+All nets connected!
+total wirelength is 4157957
+total overflow is 462976
+
+DONE!
+tux-38:~/Desktop/ECE556/ece556$ ./556_eval.exe adaptec2.gr adaptec2_15mins_n0_d0_new 0
+Parsing benchmark....
+Reading solution...
+All nets connected!
+total wirelength is 5175684
+total overflow is 513012
+
+DONE!
+tux-38:~/Desktop/ECE556/ece556$ ./556_eval.exe adaptec2.gr adaptec2_15mins_n1_d0_new 0
+Parsing benchmark....
+Reading solution...
+All nets connected!
+total wirelength is 5230141
+total overflow is 457159
+
+DONE!
+tux-38:~/Desktop/ECE556/ece556$ ./556_eval.exe adaptec2.gr adaptec2_15mins_n0_d1_new 0
+Parsing benchmark....
+Reading solution...
+All nets connected!
+total wirelength is 3499023
+total overflow is 203921
+
+DONE!
+tux-38:~/Desktop/ECE556/ece556$ ./556_eval.exe adaptec2.gr adaptec2_15mins_n1_d1_new 0
+Parsing benchmark....
+Reading solution...
+All nets connected!
+total wirelength is 3603291
+total overflow is 65471
+
+DONE!
+tux-38:~/Desktop/ECE556/ece556$ ./556_eval.exe adaptec3.gr adaptec3_15mins_n0_d0_new 0
+Parsing benchmark....
+Reading solution...
+All nets connected!
+total wirelength is 14953073
+total overflow is 3287533
+
+DONE!
+tux-38:~/Desktop/ECE556/ece556$ ./556_eval.exe adaptec3.gr adaptec3_15mins_n1_d0_new 0
+Parsing benchmark....
+Reading solution...
+All nets connected!
+total wirelength is 15017075
+total overflow is 3223001
+
+DONE!
+tux-38:~/Desktop/ECE556/ece556$ ./556_eval.exe adaptec3.gr adaptec3_15mins_n0_d1_new 0
+Parsing benchmark....
+Reading solution...
+All nets connected!
+total wirelength is 10091069
+total overflow is 1265557
+
+DONE!
+tux-38:~/Desktop/ECE556/ece556$ ./556_eval.exe adaptec3.gr adaptec3_15mins_n1_d1_new 0
+Parsing benchmark....
+Reading solution...
+All nets connected!
+total wirelength is 10108583
+total overflow is 1091476
+
