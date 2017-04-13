@@ -1,0 +1,21 @@
+Team Name    - Routatoiulle
+Team Members - Sabareesh Ganapathy , Prasanna Venkatesh Srinivasan
+
+
+Responsibilities:
+
+Prasanna - Implementation of Net decomposition, edge-weight calculation,termination condition.
+Sabareesh - Implementation of net ordering and A-star routing heuristic.
+Sabareesh and Prasanna - Integration and debugging
+
+Adaptec-1 Analysis:
+-------------------------------------------------------------------------------
+|    -d=0,-n=0      |    -d=0,-n=1      |    -d=1 -n=0     |   -d=1 -n=1      |
+-------------------------------------------------------------------------------
+|                   |                   |                  |                  |
+|   TWL   |   TOF   |   TWL   |   TOF   |   TWL   |   TOF  |   TWL   | TOF    |
+-------------------------------------------------------------------------------
+|         |         |         |         |         |        |         |        |          
+| 5465212 | 1669008 | 5807083 | 1536683 | 3720449 | 650682 | 4485693 | 440586 |      
+-------------------------------------------------------------------------------
+
