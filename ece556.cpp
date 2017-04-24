@@ -231,7 +231,7 @@ int readBenchmark(const char *fileName, routingInst *rst){
 
 int ripnreroute(routingInst *rst);
 
-int routatouille_astar ( int*edge_array,point start_vertex, point end_vertex, int gx, int gy,int* edge_weights );
+int routatouille_astar ( int*edge_array,point start_vertex, point end_vertex, int gx, int gy,double* edge_weights );
 
 int solveRouting(routingInst *rst, int d, int n){
   /*********** TO BE FILLED BY YOU **********/
@@ -955,9 +955,17 @@ int solveRouting(routingInst *rst, int d, int n){
 		
     }
 	
+   for(int e=0; e<alt_seg_array[ num_segments-1].numEdges ; e++)
+   {
+      rst->edgeUtils[alt_seg_array[num_segments-1].edges[e]]--;               //Reducing utilization of alt_seg edges because that route is being discarded
+
+   }
+
 	
 
-  }	//end of for-loop	
+  }	//end of for-loop
+
+
 	
  }		//End of net decomposition
 
@@ -975,16 +983,27 @@ int solveRouting(routingInst *rst, int d, int n){
 }
 
 
+double logistic_cost ( int overflow ) {
+
+
+   double cost = 1 + 1/( 1 + exp(-overflow) );
+   return cost;
+
+
+}
 
 
 int ripnreroute(routingInst *rst){
 
-    int *edge_weights; //Edge weight array
+    double *edge_weights; //Edge weight array
     int *edge_ovfhist; //Edge overflow-history array
 
    
-    edge_weights = new int[rst->numEdges];
+    edge_weights = new double[rst->numEdges];
     edge_ovfhist = new int[rst->numEdges];
+
+
+    unsigned long total_overflow = 0;
 
     /* Calculating edge weights for first time */
 
@@ -997,7 +1016,12 @@ int ripnreroute(routingInst *rst){
 			overflow = 0; 
 		}
 
-		edge_weights[k] = overflow;
+		else {
+
+			total_overflow +=overflow;
+		}
+
+		edge_weights[k] = logistic_cost( overflow );
 
     		edge_ovfhist[k] = 1;    // Initializing overflow history to 1 for each edge 
 
@@ -1015,13 +1039,11 @@ int ripnreroute(routingInst *rst){
 
   
 
-   std::priority_queue <int> net_costQ;  //Using a max-queue to store net costs in descending order
+   std::priority_queue <double> net_costQ;  //Using a max-queue to store net costs in descending order
 
-   map<int,int> net_cost_map;
+   map<double,int> net_cost_map;
    
-
-   
-    int net_cost=0;
+   double net_cost=0;
 
    for(int k=0;k<rst->numNets;k++) {
 
@@ -1058,11 +1080,13 @@ int ripnreroute(routingInst *rst){
   
   
    net *net_array = rst->nets;
-  
+ 
+   //ofstream file1;
+   //file1.open("gain_adaptec3.csv"); 
 
    while ( (net_costQ.empty() == false) && (elapsed_time < 900) ){
 
-	int net_cost = net_costQ.top();
+	double net_cost = net_costQ.top();
 
 	int net_indx = net_cost_map[ net_cost ];
 
@@ -1094,11 +1118,12 @@ int ripnreroute(routingInst *rst){
 			if ( overflow > 0 ) {
 
 				edge_ovfhist[ edgeid ]++;
+			        total_overflow--;
 
 			}		
 	
 
-			edge_weights[ edgeid ] = overflow*edge_ovfhist[ edgeid ] ;
+			edge_weights[ edgeid ] = logistic_cost(overflow) * edge_ovfhist[ edgeid ] ;
 
 		}
 
@@ -1108,6 +1133,9 @@ int ripnreroute(routingInst *rst){
 	/* Reroute the net */
 
 	/*Loop through all the segments. For each segment from Point P1 to P2 there's number of edges. Re-route these edges through A* */
+
+	
+    //	double cur_net_cost=0;
 	
 	for(int indx=0; indx<net_array[ net_indx ].nroute.numSegs; indx++)
 	{
@@ -1127,20 +1155,18 @@ int ripnreroute(routingInst *rst){
 
   		cur_seg_array[indx].edges = new int[num_edges];
 
+		cur_seg_array[ indx ].numEdges = num_edges;
+
+               /* Copying the new edgeids and updating edge utils */
+
+	
+
 		for(int e=0;e<num_edges;e++) {
 
-			cur_seg_array[indx].edges[e] = temp_edgearray[e];
 
-		}
-	
-		cur_seg_array[ indx ].numEdges = num_edges;
-		
-		/*Updating edgeUtils*/
-	
-		for (int l=0;l<num_edges ;l++) {
-
-
-			int edgeid = cur_seg_array[ indx ].edges[l];
+			int edgeid = temp_edgearray[e];
+			
+			cur_seg_array[indx].edges[e] = edgeid;
 
 			rst->edgeUtils[ edgeid ]++;
 			
@@ -1154,19 +1180,38 @@ int ripnreroute(routingInst *rst){
 			if ( overflow > 0 ) {
 
 				edge_ovfhist[ edgeid ]++;
+				total_overflow++;
 			}
 
-			edge_weights[ edgeid ] = overflow*edge_ovfhist[ edgeid ];
+			edge_weights[ edgeid ] = logistic_cost(overflow) * edge_ovfhist[ edgeid ];
+		        
+//			cur_net_cost += edge_weights [ edgeid ];
+				
 
-	        }
+		}
+	
 
    
    	}  //rerouted all segments for current net (for loop)
 
+	// Reinserting current net into Q , it could be a worse net still
+
+	/*	
+	if (cur_net_cost > 0) {
+
+		net_costQ.push( cur_net_cost );
+		net_cost_map[ cur_net_cost ] = net_indx;
+
+  	}	
+	*/
+
     	end_time = time(NULL);
-   	elapsed_time = difftime(end_time, start);   	
+   	elapsed_time = difftime(end_time, start);   
+       	//file1 << elapsed_time <<"," << total_overflow <<"\n"; 	
   
   }// all bad nets while loop
+
+  cout << "Overflow: "<< total_overflow;
 	
 //   end_time = time(NULL);
 //   elapsed_time = difftime(end_time, start); 
@@ -1182,7 +1227,7 @@ typedef struct {
 
 
   point vertex;
-  int distance;
+  double distance;
 
 
 } queue_elem;
@@ -1204,11 +1249,11 @@ struct compare {
 };
 
 
-int routatouille_astar ( int*edge_array,point start_vertex, point end_vertex, int gx, int gy,int* edge_weights ) {
+int routatouille_astar ( int*edge_array,point start_vertex, point end_vertex, int gx, int gy,double* edge_weights ) {
 
    std::priority_queue <queue_elem, vector<queue_elem>, compare > min_queue;  //A* search min-queue
    
-   std::map <point,int> distance_map;
+   std::map <point,double> distance_map;
    std::map <point,point> parent_map;
 
    std::set <point> processed_set; 
@@ -1216,10 +1261,10 @@ int routatouille_astar ( int*edge_array,point start_vertex, point end_vertex, in
    queue_elem init;
 
    init.vertex = start_vertex;
-   init.distance = 0;
+   init.distance = 0.0;
    min_queue.push( init );
 
-   distance_map[ start_vertex ] = 0 ;
+   distance_map[ start_vertex ] = 0.0 ;
    parent_map [ start_vertex ] = start_vertex;
 
 
@@ -1230,7 +1275,7 @@ int routatouille_astar ( int*edge_array,point start_vertex, point end_vertex, in
     min_queue.pop();
 
     point cur_vertex = cur_elem.vertex;
-    int cur_distance = cur_elem.distance;
+    double cur_distance = cur_elem.distance;
 
 
     if ( (cur_vertex.x == end_vertex.x ) && (cur_vertex.y == end_vertex.y)) {
@@ -1307,7 +1352,7 @@ int routatouille_astar ( int*edge_array,point start_vertex, point end_vertex, in
 
 	int manhattan_distance = abs( cur_vertex.x - adj_vertex.x ) + abs( cur_vertex.y - adj_vertex.y );
 	
-	int adj_distance = cur_distance + edge_weights[ edge_indx ] + manhattan_distance;
+	double adj_distance = cur_distance + edge_weights[ edge_indx ] + manhattan_distance;
 	
          queue_elem adj_elem;
 	 adj_elem.vertex = adj_vertex;
@@ -1327,7 +1372,7 @@ int routatouille_astar ( int*edge_array,point start_vertex, point end_vertex, in
 
 	else {
 
-	   int prev_adj_distance = distance_map [ adj_vertex ];
+	   double prev_adj_distance = distance_map [ adj_vertex ];
 	  
 	   if ( prev_adj_distance > adj_distance ) {
 		

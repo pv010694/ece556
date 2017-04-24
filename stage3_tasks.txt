@@ -1,0 +1,5 @@
+- Q factor optimization
+- Edge weight using exponential for overflow
+- Modify net ordering after each iteration 
+- OpenMP parallelization ?
+- Z-routing
