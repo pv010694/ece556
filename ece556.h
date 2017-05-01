@@ -13,6 +13,8 @@
 
 #include <sys/time.h>
 #include <vector>
+#include <algorithm>
+#include <utility>
 #include <list>
 #include <iostream>
 #include <fstream>
@@ -21,6 +23,7 @@
 #include <set>
 
 using namespace std;
+typedef std::pair<double,int> mypair;
 
 
   /**

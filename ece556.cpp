@@ -701,94 +701,8 @@ int solveRouting(routingInst *rst, int d, int n){
 			//connect p_prev with oldp_int
 		}
 		L_FLAG=0;
-		//Connect oldp_int with p_prev here instead
-		/*
-		if(d==1)
-		{
 			
-		//////////////////////////////////////////////////////////////////////////////////////////////////
-		////////////////ADDED LOGIC TO ENSURE THERE'S NO DANGLING NODES//////////////////////////////////
-		////////////////////////////////////////////////////////////////////////////////////////////////
-		int extra_edges = 0;
-		int z=0; 
-		//point p1_cpy,p2_cpy;
-		//p1_cpy = cur_seg_array[indx-1].p1;
-		//p2_cpy = cur_seg_array[indx-1].p2;
-		if(oldp_int.x == p_prev.x)
-			extra_edges = abs(oldp_int.y - p_prev.y);
-		else
-			extra_edges = abs(oldp_int.x - p_prev.x);
-
-		int *temp_arr = new int [old_numEdges+ extra_edges];
-		for(z=0;z<old_numEdges;z++)
-			temp_arr[z] = cur_seg_array[indx-1].edges[z];
-
-		if(oldp_int.x == p_prev.x)
-		{
-			int source_y = oldp_int.y;
-			if ( oldp_int.y > p_prev.y )
-			source_y = p_prev.y;
-	
-		int first_edge_indx	     = ( (oldp_int.x)*(rst->gy - 1) + source_y + rst->gy * (rst->gx - 1) );
-
-		temp_arr[z] = first_edge_indx;
-		z++;
-		rst->edgeUtils[ first_edge_indx ]++;	
-
-		for(int E=z; E< old_numEdges+extra_edges; E++) {
-
-			temp_arr[E] = ++first_edge_indx;
-			
-			rst->edgeUtils[ first_edge_indx ]++;	
-		    }
-		delete [] cur_seg_array[indx-1].edges;
-			
-		cur_seg_array[indx-1].edges = new int [old_numEdges + extra_edges];
-		
-		for(z=0; z<old_numEdges + extra_edges; z++)
-			cur_seg_array[indx-1].edges[z] = temp_arr[z];
-
-			cur_seg_array[indx-1].numEdges = old_numEdges + extra_edges;
-		}
-	
-		else
-		{
-			int source_x = oldp_int.x;
-
-			if ( oldp_int.x > p_prev.x )
-				source_x = p_prev.x;
-
-			int first_edge_indx	     = ( (oldp_int.y)*(rst->gx - 1) + source_x );
-	
-   	   	   	temp_arr[z] = first_edge_indx;
-			z++;
-			rst->edgeUtils[ first_edge_indx ]++;	
-	
-			for(int E=z; E< old_numEdges+extra_edges; E++) {
-
-			temp_arr[E] = ++first_edge_indx;
-			
-			rst->edgeUtils[ first_edge_indx ]++;	
-		    }
-		delete [] cur_seg_array[indx-1].edges;
-			
-		cur_seg_array[indx-1].edges = new int [old_numEdges + extra_edges];
-		
-		for(z=0; z<old_numEdges + extra_edges; z++)
-			cur_seg_array[indx-1].edges[z] = temp_arr[z];
-		cur_seg_array[indx-1].numEdges = old_numEdges + extra_edges;
-		//cur_seg_array[indx-1].p1 = p1_cpy;
-		//cur_seg_array[indx-1].p2 = p2_cpy;
-		}
-		delete[] temp_arr;
-		}
-		}*/
-		/////////////////////////////////////////////////////////////////
-		//////////////END OF LOGIC FOR DANGLING NODES///////////////////
-		///////////////////////////////////////////////////////////////	
-			
-
-	       cur_seg_array[indx].p1 = p_prev;
+	        cur_seg_array[indx].p1 = p_prev;
 		cur_seg_array[indx].p2 = pins[nearest_pin_index];	
 		
 		if( oldp_int.y == pins[nearest_pin_index].y )
@@ -993,6 +907,14 @@ double logistic_cost ( int overflow ) {
 }
 
 
+
+
+bool vec_comparator ( const mypair& l, const mypair& r)
+   { return l.first > r.first; }
+
+
+
+
 int ripnreroute(routingInst *rst){
 
     double *edge_weights; //Edge weight array
@@ -1033,17 +955,16 @@ int ripnreroute(routingInst *rst){
 
   
 
-//  do {
-
    /* Finding the nets with overflow */
 
   
 
-   std::priority_queue <double> net_costQ;  //Using a max-queue to store net costs in descending order
 
-   map<double,int> net_cost_map;
-   
    double net_cost=0;
+   vector <mypair> net_order_vec;
+
+   ofstream file1;
+   file1.open("gain_adaptec3.csv"); 
 
    for(int k=0;k<rst->numNets;k++) {
 
@@ -1067,8 +988,10 @@ int ripnreroute(routingInst *rst){
 
 	if (net_cost > 0) {
 
-		net_costQ.push( net_cost );
-		net_cost_map[ net_cost ] = k;
+		mypair net_pair;
+
+		net_pair  = std::make_pair(net_cost,k); 
+		net_order_vec.push_back( net_pair );
 
   	}	
 
@@ -1076,22 +999,28 @@ int ripnreroute(routingInst *rst){
   }
   
 
+   /* Order the nets */
+
+    std::sort( net_order_vec.begin(),net_order_vec.end(),vec_comparator );	
+
   /* Rip-up and reroute the bad nets  */
   
   
    net *net_array = rst->nets;
  
-   //ofstream file1;
-   //file1.open("gain_adaptec3.csv"); 
+    int vec_indx = 0;
+    unsigned long long itr=0;
 
-   while ( (net_costQ.empty() == false) && (elapsed_time < 900) ){
 
-	double net_cost = net_costQ.top();
+   /* Running only for 8 minutes for maximum Quality factor */
 
-	int net_indx = net_cost_map[ net_cost ];
-
-	net_costQ.pop();
+    while ( (elapsed_time < 1000) ){
 	
+
+        int net_indx = net_order_vec[ vec_indx ].second;
+        
+	itr++;
+
 	segment *cur_seg_array = net_array[ net_indx ].nroute.segments;
 
 
@@ -1134,8 +1063,6 @@ int ripnreroute(routingInst *rst){
 
 	/*Loop through all the segments. For each segment from Point P1 to P2 there's number of edges. Re-route these edges through A* */
 
-	
-    //	double cur_net_cost=0;
 	
 	for(int indx=0; indx<net_array[ net_indx ].nroute.numSegs; indx++)
 	{
@@ -1185,8 +1112,6 @@ int ripnreroute(routingInst *rst){
 
 			edge_weights[ edgeid ] = logistic_cost(overflow) * edge_ovfhist[ edgeid ];
 		        
-//			cur_net_cost += edge_weights [ edgeid ];
-				
 
 		}
 	
@@ -1194,29 +1119,76 @@ int ripnreroute(routingInst *rst){
    
    	}  //rerouted all segments for current net (for loop)
 
-	// Reinserting current net into Q , it could be a worse net still
+		
+	
+	vec_indx++;
 
-	/*	
-	if (cur_net_cost > 0) {
 
-		net_costQ.push( cur_net_cost );
-		net_cost_map[ cur_net_cost ] = net_indx;
+	// Resorting the net order every 5000 iterations
 
-  	}	
-	*/
+	
+	if( itr>0 && ( itr%5000==0 ) ) {
+
+   		double net_cost=0;
+	        int indx = 0;
+
+   		for(int k=0;k<rst->numNets;k++) {
+
+			segment *cur_seg_array = rst->nets[k].nroute.segments;
+	
+			net_cost = 0;
+
+			for(int j=0;j<rst->nets[k].nroute.numSegs;j++) {
+
+				int *edgearray = cur_seg_array[j].edges;
+				int numEdges = cur_seg_array[j].numEdges;
+
+				for (int l=0;l<numEdges;l++) {
+
+					int edgeid = edgearray[l];			
+					net_cost  += edge_weights[ edgeid ];
+
+				}
+
+			}		
+
+			if (net_cost > 0) {
+
+				mypair net_pair;
+				net_pair  = std::make_pair(net_cost,k);
+ 
+				if ( indx < net_order_vec.size() ) {
+					net_order_vec[ indx ] =  net_pair;
+					indx++;
+				}
+
+				else {
+					net_order_vec.push_back ( net_pair );
+					indx++;
+				}
+
+  			}	
+
+
+  	   }
+  
+
+   	      /* Order the nets */
+
+    	        std::sort( net_order_vec.begin(),net_order_vec.begin()+indx,vec_comparator );	
+		vec_indx = 0;	
+	
+
+	}
+
 
     	end_time = time(NULL);
-   	elapsed_time = difftime(end_time, start);   
-       	//file1 << elapsed_time <<"," << total_overflow <<"\n"; 	
+   	elapsed_time = difftime(end_time, start); 
+
+       	file1 << elapsed_time <<"," << total_overflow <<"\n"; 	
+	
   
   }// all bad nets while loop
-
-  cout << "Overflow: "<< total_overflow;
-	
-//   end_time = time(NULL);
-//   elapsed_time = difftime(end_time, start); 
-
- //  } while (elapsed_time < 900);
 
 
   return 0;
