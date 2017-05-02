@@ -963,8 +963,8 @@ int ripnreroute(routingInst *rst){
    double net_cost=0;
    vector <mypair> net_order_vec;
 
-   ofstream file1;
-   file1.open("gain_adaptec3.csv"); 
+   //ofstream file1;
+   //file1.open("gain_adaptec1.csv"); 
 
    for(int k=0;k<rst->numNets;k++) {
 
@@ -1014,7 +1014,7 @@ int ripnreroute(routingInst *rst){
 
    /* Running only for 8 minutes for maximum Quality factor */
 
-    while ( (elapsed_time < 1000) ){
+    while ( (elapsed_time < 480) ){
 	
 
         int net_indx = net_order_vec[ vec_indx ].second;
@@ -1185,7 +1185,7 @@ int ripnreroute(routingInst *rst){
     	end_time = time(NULL);
    	elapsed_time = difftime(end_time, start); 
 
-       	file1 << elapsed_time <<"," << total_overflow <<"\n"; 	
+       	//file1 << elapsed_time <<"," << total_overflow <<"\n"; 	
 	
   
   }// all bad nets while loop
